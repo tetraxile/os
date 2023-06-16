@@ -93,6 +93,7 @@ enter_protected_mode:
     rep movsb
 
     lgdt [GDT_descriptor]
+    lidt [IDT_descriptor]
 
     ; set cr0.PE (bit 0)
     mov eax, cr0
