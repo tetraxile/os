@@ -8,5 +8,5 @@ if [ -f "$OUT_DISK" ]; then
 fi
 
 scripts/build.sh &&
-sudo dd if=build/boot.bin of=$OUT_DISK 2> /dev/null &&
+sudo dd if=build/os.img of=$OUT_DISK 2> /dev/null &&
 sudo eject /dev/sda
