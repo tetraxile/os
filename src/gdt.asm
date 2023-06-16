@@ -51,10 +51,6 @@ GDT_data:
 
 GDT_end:
 
-GDT_SIZE = GDT_end - GDT_start - 1
+GDT_SIZE = GDT_end - GDT_start
 CODE_SEGMENT = GDT_code - GDT_start
 DATA_SEGMENT = GDT_data - GDT_start
-
-GDT_descriptor:
-    dw GDT_SIZE  ; size
-    dd GDT_start ; offset

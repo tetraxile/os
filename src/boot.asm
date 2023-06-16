@@ -77,7 +77,21 @@ bios_print_string:
 
 include "src/gdt.asm"
 
+GDT_descriptor:
+    dw GDT_SIZE - 1 ; size
+    dd 0x800        ; offset
+
+IDT_descriptor:
+    dw 0x800 ; size
+    dd 0x0   ; offset
+
 enter_protected_mode:
+    ; copy the GDT to address 0x800
+    mov si, GDT_start
+    mov di, 0x800
+    mov cx, GDT_SIZE
+    rep movsb
+
     lgdt [GDT_descriptor]
 
     ; set cr0.PE (bit 0)
