@@ -10,7 +10,7 @@ start:
     mov al, 0x03
     int 0x10
 
-    ; disable cursor (set bit 5 of `ch`)
+    ; disable cursor (set bit 5 of ch)
     mov ah, 0x01
     mov ch, 00100000b
     int 0x10
@@ -23,10 +23,10 @@ start:
     mov sp, 0x7c00
 
     mov es, ax
-    mov bp, strings.hello
+    mov bp, strings.starting_os
     call bios_print_string
 
-    hlt
+    jmp enter_protected_mode
 
 
 ; write a cp437 string to the VGA text buffer at the cursor
@@ -37,24 +37,59 @@ bios_print_string:
     movzx cx, byte [es:bp]
     inc bp
 
-    ; print string (white text on black background)
-    mov ah, 0x13
-    mov al, 0x00
-    mov bh, 0x00
-    mov bl, 0x0f
+    mov ah, 0x13       ; print string interrupt
+    mov al, 0x00       ; attribute in bl, don't move cursor
+    mov bh, 0x00       ; display page 0
+    mov bl, 0x0f       ; white text on black background
     mov dh, [cursor_y]
-    mov dl, 0
+    mov dl, 0          ; move cursor to start of line
     int 0x10
 
     ; move the cursor to the next line
     inc byte [cursor_y]
     ret
 
+
+include "src/gdt.asm"
+
+enter_protected_mode:
+    lgdt [GDT_descriptor]
+
+    ; set cr0.PE (bit 0)
+    mov eax, cr0
+    or eax, 0x0001
+    mov cr0, eax
+
+    ; far jump to reload cs register
+    jmp CODE_SEGMENT:.reload_cs
+
+use32
+.reload_cs:
+    mov ax, DATA_SEGMENT
+    mov ds, ax
+    mov ss, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+    ; set up kernel stack
+    mov ebp, 0x90000
+    mov esp, ebp
+
+    mov eax, strings.entered_protected_mode
+    call print_string
+
+    hlt
+
+
+cursor_x db 0
 cursor_y db 0
 
 strings:
-.hello db 11, "hello world"
+.starting_os db 11, "starting OS"
+.entered_protected_mode db "entered protected mode", 0xa, 0
 
+include "src/print.asm"
 
 times 0x1b8-($-$$) db 0
 
