@@ -60,3 +60,7 @@ print_string:
 .end:
     pop esi
     ret
+
+
+cursor_x db 0
+cursor_y db 2

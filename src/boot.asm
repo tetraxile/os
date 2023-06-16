@@ -1,7 +1,11 @@
 use16
 org 0x7c00
 
+KERNEL_ADDR = 0x10000
+
 start:
+    mov [drive_number], dl
+
     cli ; disable interrupts for now
     cld ; set direction flag to auto-increment
 
@@ -26,7 +30,28 @@ start:
     mov bp, strings.starting_os
     call bios_print_string
 
+    ; load kernel into memory
+    mov ah, 0x42 ; extended read sectors
+    mov dl, [drive_number]
+    mov si, kernel_dap
+    int 0x13
+    jc .disk_error
+    cmp ah, 0
+    jnz .disk_error
+
+    xor ax, ax
+    mov es, ax
+    mov bp, strings.loaded_kernel
+    call bios_print_string
+
     jmp enter_protected_mode
+
+.disk_error:
+    xor ax, ax
+    mov es, ax
+    mov bp, strings.disk_error
+    call bios_print_string
+    hlt
 
 
 ; write a cp437 string to the VGA text buffer at the cursor
@@ -76,22 +101,27 @@ use32
     mov ebp, 0x90000
     mov esp, ebp
 
-    mov eax, strings.entered_protected_mode
-    call print_string
-
-    hlt
+    jmp KERNEL_ADDR
 
 
-cursor_x db 0
 cursor_y db 0
+drive_number db 0
 
 strings:
 .starting_os db 11, "starting OS"
-.entered_protected_mode db "entered protected mode", 0xa, 0
+.loaded_kernel db 13, "loaded kernel"
+.disk_error db 10, "disk error"
 
-include "src/print.asm"
+times 0x1a8-($-$$) db 0
 
-times 0x1b8-($-$$) db 0
+; disk address packet for loading kernel
+kernel_dap:
+    db 0x10       ; size of packet
+    db 0          ; unused
+    dw 0x20       ; number of sectors
+    dd 0x10000000 ; memory buffer (1000h:0000h)
+    dd 1          ; starting LBA 0:31
+    dd 0          ; starting LBA 32:47
 
 dd 0xdead1979 ; disk signature
 dw 0x0000     ; reserved
