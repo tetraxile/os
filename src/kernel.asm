@@ -12,6 +12,10 @@ kernel_main:
     call enable_a20
     call remap_pic_offsets
 
+    call ps2_init
+    mov eax, notification.initialized_ps2
+    call print_string
+
     call idt_init
     mov eax, notification.initialized_idt
     call print_string
@@ -25,5 +29,6 @@ kernel_main:
 
 notification:
 .initialized_idt db "initialized IDT", 0xa, 0
+.initialized_ps2 db "initialized PS/2 controller", 0xa, 0
 
 times 0x4000-($-$$) db 0
