@@ -344,8 +344,7 @@ pit_irq_handler:
 keyboard_irq_handler:
     in al, 0x60
 
-    mov al, 'k'
-    call print_char
+    call print_u8_hex
     
     mov al, 0x1
     call send_eoi
