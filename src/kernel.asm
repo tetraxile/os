@@ -16,9 +16,12 @@ kernel_main:
     mov eax, notification.initialized_idt
     call print_string
 
-    int 0x3
+    sti
 
+.halt:
     hlt
+    jmp .halt
+
 
 notification:
 .initialized_idt db "initialized IDT", 0xa, 0

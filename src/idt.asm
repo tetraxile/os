@@ -87,14 +87,79 @@ idt_init:
     mov ecx, 0x15
     call idt_entry_init
 
+    mov eax, pit_irq_handler
+    mov ecx, 0x20
+    call idt_entry_init
+
+    mov eax, keyboard_irq_handler
+    mov ecx, 0x21
+    call idt_entry_init
+
+    mov eax, irq_2_handler
+    mov ecx, 0x22
+    call idt_entry_init
+
+    mov eax, irq_3_handler
+    mov ecx, 0x23
+    call idt_entry_init
+
+    mov eax, irq_4_handler
+    mov ecx, 0x24
+    call idt_entry_init
+
+    mov eax, irq_5_handler
+    mov ecx, 0x25
+    call idt_entry_init
+
+    mov eax, irq_6_handler
+    mov ecx, 0x26
+    call idt_entry_init
+
+    mov eax, irq_7_handler
+    mov ecx, 0x27
+    call idt_entry_init
+
+    mov eax, irq_8_handler
+    mov ecx, 0x28
+    call idt_entry_init
+
+    mov eax, irq_9_handler
+    mov ecx, 0x29
+    call idt_entry_init
+
+    mov eax, irq_10_handler
+    mov ecx, 0x2a
+    call idt_entry_init
+
+    mov eax, irq_11_handler
+    mov ecx, 0x2b
+    call idt_entry_init
+
+    mov eax, irq_12_handler
+    mov ecx, 0x2c
+    call idt_entry_init
+
+    mov eax, irq_13_handler
+    mov ecx, 0x2d
+    call idt_entry_init
+
+    mov eax, irq_14_handler
+    mov ecx, 0x2e
+    call idt_entry_init
+
+    mov eax, irq_15_handler
+    mov ecx, 0x2f
+    call idt_entry_init
+
     ret
+
 
 ; initialize an IDT entry to point at a handler function
 ; * eax - pointer to handler function
 ; * ecx - IDT index
 idt_entry_init:
     shl ecx, 3
-    
+
     mov edx, eax
     and edx, 0x0000ffff
     or  edx, 0x00080000
@@ -264,6 +329,97 @@ control_protection_exception_handler:
 
     cli
     hlt
+
+
+; ========== IRQS ==========
+
+pit_irq_handler:
+    mov al, '.'
+    call print_char
+
+    mov al, 0x0
+    call send_eoi
+    iret
+
+keyboard_irq_handler:
+    in al, 0x60
+
+    mov al, 'k'
+    call print_char
+    
+    mov al, 0x1
+    call send_eoi
+    iret
+
+irq_2_handler:
+    mov al, 0x2
+    call send_eoi
+    iret
+
+irq_3_handler:
+    mov al, 0x3
+    call send_eoi
+    iret
+
+irq_4_handler:
+    mov al, 0x4
+    call send_eoi
+    iret
+
+irq_5_handler:
+    mov al, 0x5
+    call send_eoi
+    iret
+
+irq_6_handler:
+    mov al, 0x6
+    call send_eoi
+    iret
+
+irq_7_handler:
+    mov al, 0x7
+    call send_eoi
+    iret
+
+irq_8_handler:
+    mov al, 0x8
+    call send_eoi
+    iret
+
+irq_9_handler:
+    mov al, 0x9
+    call send_eoi
+    iret
+
+irq_10_handler:
+    mov al, 0xa
+    call send_eoi
+    iret
+
+irq_11_handler:
+    mov al, 0xb
+    call send_eoi
+    iret
+
+irq_12_handler:
+    mov al, 0xc
+    call send_eoi
+    iret
+
+irq_13_handler:
+    mov al, 0xd
+    call send_eoi
+    iret
+
+irq_14_handler:
+    mov al, 0xe
+    call send_eoi
+    iret
+
+irq_15_handler:
+    mov al, 0xf
+    call send_eoi
+    iret
 
 
 exc_message:
