@@ -350,8 +350,6 @@ keyboard_irq_handler:
     in al, 0x60
     mov edx, eax
 
-    jmp .use_keycode
-    
     test eax, 0x80
     setnz byte [.is_released]
 
