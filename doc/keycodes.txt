@@ -1,0 +1,137 @@
+3 bits for row, 5 bits for column.
+based on ISO 105-key layout
+
+0x00 | 000 00000 | escape
+0x01 | 000 00001 | f1
+0x02 | 000 00010 | f2
+0x03 | 000 00011 | f3
+0x04 | 000 00100 | f4
+0x05 | 000 00101 | f5
+0x06 | 000 00110 | f6
+0x07 | 000 00111 | f7
+0x08 | 000 01000 | f8
+0x09 | 000 01001 | f9
+0x0a | 000 01010 | f10
+0x0b | 000 01011 | f11
+0x0c | 000 01100 | f12
+0x0d | 000 01101 | print screen
+0x0e | 000 01110 | scroll lock
+0x0f | 000 01111 | pause break
+     |           | 
+0x20 | 001 00000 | ` (backtick)
+0x21 | 001 00001 | 1
+0x22 | 001 00010 | 2
+0x23 | 001 00011 | 3
+0x24 | 001 00100 | 4
+0x25 | 001 00101 | 5
+0x26 | 001 00110 | 6
+0x27 | 001 00111 | 7
+0x28 | 001 01000 | 8
+0x29 | 001 01001 | 9
+0x2a | 001 01010 | 0
+0x2b | 001 01011 | - (hyphen)
+0x2c | 001 01100 | = (equals)
+0x2d | 001 01101 | backspace
+0x2e | 001 01110 | insert
+0x2f | 001 01111 | home
+0x30 | 001 10000 | page up
+0x31 | 001 10001 | num lock
+0x32 | 001 10010 | numpad /
+0x33 | 001 10011 | numpad *
+0x34 | 001 10100 | numpad -
+     |           | 
+0x40 | 010 00000 | tab
+0x41 | 010 00001 | q
+0x42 | 010 00010 | w
+0x43 | 010 00011 | e
+0x44 | 010 00100 | r
+0x45 | 010 00101 | t
+0x46 | 010 00110 | y
+0x47 | 010 00111 | u
+0x48 | 010 01000 | i
+0x49 | 010 01001 | o
+0x4a | 010 01010 | p
+0x4b | 010 01011 | [ (left square bracket)
+0x4c | 010 01100 | ] (right square bracket)
+0x4d | 010 01101 | enter
+0x4e | 010 01110 | delete
+0x4f | 010 01111 | end
+0x50 | 010 10000 | page down
+0x51 | 010 10001 | numpad 7
+0x52 | 010 10010 | numpad 8
+0x53 | 010 10011 | numpad 9
+0x54 | 010 10100 | numpad +
+     |           | 
+0x60 | 011 00000 | caps lock
+0x61 | 011 00001 | a
+0x62 | 011 00010 | s
+0x63 | 011 00011 | d
+0x64 | 011 00100 | f
+0x65 | 011 00101 | g
+0x66 | 011 00110 | h
+0x67 | 011 00111 | j
+0x68 | 011 01000 | k
+0x69 | 011 01001 | l
+0x6a | 011 01010 | ; (semicolon)
+0x6b | 011 01011 | ' (apostrophe)
+0x6c | 011 01100 | \ (backslash)
+0x6d | 011 01101 | numpad 4
+0x6e | 011 01110 | numpad 5
+0x6f | 011 01111 | numpad 6
+     |           | 
+0x80 | 100 00000 | left shift
+0x81 | 100 00001 | < (less than) (set 1 scancode 0x56)
+0x82 | 100 00010 | z
+0x83 | 100 00011 | x
+0x84 | 100 00100 | c
+0x85 | 100 00101 | v
+0x86 | 100 00110 | b
+0x87 | 100 00111 | n
+0x88 | 100 01000 | m
+0x89 | 100 01001 | , (comma)
+0x8a | 100 01010 | . (full stop)
+0x8b | 100 01011 | / (slash)
+0x8c | 100 01100 | right shift
+0x8d | 100 01101 | up arrow
+0x8e | 100 01110 | numpad 1
+0x8f | 100 01111 | numpad 2
+0x90 | 100 10000 | numpad 3
+0x91 | 100 10001 | numpad enter
+     |           | 
+0xa0 | 101 00000 | left control
+0xa1 | 101 00001 | left meta
+0xa2 | 101 00010 | left alt
+0xa3 | 101 00011 | space
+0xa4 | 101 00100 | right alt
+0xa5 | 101 00101 | right meta
+0xa6 | 101 00110 | menu
+0xa7 | 101 00111 | right control
+0xa8 | 101 01000 | left arrow
+0xa9 | 101 01001 | down arrow
+0xaa | 101 01010 | right arrow
+0xab | 101 01011 | numpad 0
+0xac | 101 01100 | numpad .
+     |           | 
+0xc0 | 110 00000 | power
+0xc1 | 110 00001 | sleep
+0xc2 | 110 00010 | wake
+0xc3 | 110 00011 | previous track
+0xc4 | 110 00100 | next track
+0xc5 | 110 00101 | mute audio
+0xc6 | 110 00110 | play audio
+0xc7 | 110 00111 | stop audio
+0xc8 | 110 01000 | volume down
+0xc9 | 110 01001 | volume up
+0xca | 110 01010 | my computer
+0xcb | 110 01011 | email
+0xcc | 110 01100 | media select
+0xcd | 110 01101 | calculator
+0xce | 110 01110 | WWW home
+0xcf | 110 01111 | WWW search
+0xd0 | 110 10000 | WWW favorites
+0xd1 | 110 10001 | WWW refresh
+0xd2 | 110 10010 | WWW stop
+0xd3 | 110 10011 | WWW forward
+0xd4 | 110 10100 | WWW back
+     |           | 
+0xff | 111 11111 | unsupported scancode
