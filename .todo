@@ -1,0 +1,17 @@
+- [ ] switch to long mode
+    - [ ] add paging
+    - [ ] provide both x86 and x86-64 versions? might need to wait until higher level language
+
+- [ ] implement filesystem
+    - [ ] disk driver
+    - [ ] fs syscalls
+
+- [ ] implement fatal error mechanism
+
+- [ ] add scrolling text to print functions
+
+- [ ] add a shell
+
+- [ ] change video mode from text to pixel graphics
+
+- [ ] usb driver?
