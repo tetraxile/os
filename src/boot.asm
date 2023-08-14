@@ -1,7 +1,7 @@
 use16
 org 0x7c00
 
-KERNEL_ADDR = 0x10000
+BOOT_STAGE_2_ADDR = 0x7e00
 
 start:
     mov [drive_number], dl
@@ -54,14 +54,12 @@ start:
     test edx, 0x20000000 ; 1 << 29
     jz .no_long_mode
 
-    ; load kernel into memory
-    mov ah, 0x42 ; extended read sectors
-    mov dl, [drive_number]
-    mov si, kernel_dap
-    int 0x13
-    jc .disk_error
-    cmp ah, 0
-    jnz .disk_error
+    ; load bootloader stage 2 and kernel into memory
+    mov si, dap.boot_stage_2
+    call read_sectors_from_disk
+
+    mov si, dap.kernel
+    call read_sectors_from_disk
 
     xor ax, ax
     mov es, ax
@@ -70,10 +68,6 @@ start:
 
     jmp enter_protected_mode
 
-.disk_error:
-    mov bp, strings.disk_error
-    call bios_print_string
-    hlt
 
 .no_cpuid:
     mov bp, strings.no_cpuid
@@ -86,9 +80,27 @@ start:
     hlt
 
 
+; read a contiguous group of sectors from the boot drive
+; * si - pointer to disk address packet (DAP)
+read_sectors_from_disk:
+    ; load kernel into memory
+    mov ah, 0x42 ; extended read sectors
+    mov dl, [drive_number]
+    int 0x13
+    jc .disk_error
+    cmp ah, 0
+    jnz .disk_error
+    ret
+
+.disk_error:
+    mov bp, strings.disk_error
+    call bios_print_string
+    hlt
+
+
 ; write a cp437 string to the VGA text buffer at the cursor
 ; and move to the next line
-; * es:bp - pointer to string, prefixed with length (1 byte)
+; * bp - pointer to string, prefixed with length (1 byte)
 bios_print_string:
     xor ax, ax
     mov es, ax
@@ -151,7 +163,7 @@ use32
     mov ebp, 0x90000
     mov esp, ebp
 
-    jmp KERNEL_ADDR
+    jmp BOOT_STAGE_2_ADDR
 
 
 cursor_y db 0
@@ -164,15 +176,24 @@ strings:
 .no_cpuid db 8, "no CPUID"
 .no_long_mode db 12, "no long mode"
 
-times 0x1a8-($-$$) db 0
+times 0x198-($-$$) db 0
 
-; disk address packet for loading kernel
-kernel_dap:
+; disk address packets (https://en.wikipedia.org/wiki/INT_13H#INT_13h_AH=42h:_Extended_Read_Sectors_From_Drive)
+dap:
+.boot_stage_2:
+    db 0x10
+    db 0
+    dw 0x2
+    dd 0x00007e00
+    dd 1
+    dd 0
+
+.kernel:
     db 0x10       ; size of packet
     db 0          ; unused
     dw 0x20       ; number of sectors
     dd 0x10000000 ; memory buffer (1000h:0000h)
-    dd 1          ; starting LBA 0:31
+    dd 3          ; starting LBA 0:31
     dd 0          ; starting LBA 32:47
 
 dd 0xdead1979 ; disk signature
