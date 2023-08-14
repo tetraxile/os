@@ -14,4 +14,6 @@
 
 - [ ] change video mode from text to pixel graphics
 
+- [ ] more informative error messages, e.g. in bootloader
+
 - [ ] usb driver?
