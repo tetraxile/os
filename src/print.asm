@@ -193,4 +193,4 @@ print_u32_hex:
 
 
 cursor_x db 0
-cursor_y db 2
+cursor_y db 0
