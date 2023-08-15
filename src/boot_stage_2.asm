@@ -1,41 +1,9 @@
 KERNEL_ADDR = 0x10000
 
 start_stage_2:
-    ; check if cpuid is supported
-    pushfd
-    pushfd
-    xor dword [esp], 0x00200000
-    popfd
-    pushfd
-    pop eax
-    xor eax, [esp]
-    popfd
-    and eax, 0x00200000
-    jz .no_cpuid
-
-    ; check if cpuid 0x80000001 is available
-    mov eax, 0x80000000
-    cpuid
-    cmp eax, 0x80000001
-    jb .no_long_mode
-
-    ; check if cpuid.LM (flag 29) is set 
-    mov eax, 0x80000001
-    cpuid
-    test edx, 0x20000000 ; 1 << 29
-    jz .no_long_mode
+    call check_cpuid
 
     jmp enter_protected_mode
-
-.no_cpuid:
-    mov bp, strings.no_cpuid
-    call bios_print_string
-    hlt
-
-.no_long_mode:
-    mov bp, strings.no_long_mode
-    call bios_print_string
-    hlt
 
 
 include "src/gdt.asm"
@@ -80,6 +48,48 @@ use32
     mov esp, ebp
 
     jmp KERNEL_ADDR
+
+
+
+use16
+; check if the `cpuid` instruction is supported, and whether
+; the LM (long mode) flag is set. errors if not
+check_cpuid:
+    ; check if cpuid is supported
+    pushfd
+    pushfd
+    xor dword [esp], 0x00200000
+    popfd
+    pushfd
+    pop eax
+    xor eax, [esp]
+    popfd
+    and eax, 0x00200000
+    jz .no_cpuid
+
+    ; check if cpuid 0x80000001 is available
+    mov eax, 0x80000000
+    cpuid
+    cmp eax, 0x80000001
+    jb .no_long_mode
+
+    ; check if cpuid.LM (flag 29) is set 
+    mov eax, 0x80000001
+    cpuid
+    test edx, 0x20000000 ; 1 << 29
+    jz .no_long_mode
+
+    ret
+
+.no_cpuid:
+    mov bp, strings.no_cpuid
+    call bios_print_string
+    hlt
+
+.no_long_mode:
+    mov bp, strings.no_long_mode
+    call bios_print_string
+    hlt
 
 
 times 0x600-($-$$) db 0
