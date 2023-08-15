@@ -8,12 +8,14 @@
 
 - [ ] implement fatal error mechanism
 
+- [ ] more informative error messages, e.g. in bootloader
+
 - [ ] add scrolling text to print functions
 
 - [ ] add a shell
 
 - [ ] change video mode from text to pixel graphics
 
-- [ ] more informative error messages, e.g. in bootloader
-
 - [ ] usb driver?
+
+- [ ] do bios disk loads 3 times
