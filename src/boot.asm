@@ -26,30 +26,6 @@ start:
     mov ss, ax
     mov sp, 0x7c00
 
-    ; check if cpuid is supported
-    pushfd
-    pushfd
-    xor dword [esp], 0x00200000
-    popfd
-    pushfd
-    pop eax
-    xor eax, [esp]
-    popfd
-    and eax, 0x00200000
-    jz .no_cpuid
-
-    ; check if cpuid 0x80000001 is available
-    mov eax, 0x80000000
-    cpuid
-    cmp eax, 0x80000001
-    jb .no_long_mode
-
-    ; check if cpuid.LM (flag 29) is set 
-    mov eax, 0x80000001
-    cpuid
-    test edx, 0x20000000 ; 1 << 29
-    jz .no_long_mode
-
     ; load bootloader stage 2 and kernel into memory
     mov si, dap.boot_stage_2
     call read_sectors_from_disk
@@ -58,16 +34,6 @@ start:
     call read_sectors_from_disk
 
     jmp BOOT_STAGE_2_ADDR
-
-.no_cpuid:
-    mov bp, strings.no_cpuid
-    call bios_print_string
-    hlt
-
-.no_long_mode:
-    mov bp, strings.no_long_mode
-    call bios_print_string
-    hlt
 
 
 ; read a contiguous group of sectors from the boot drive
