@@ -159,3 +159,5 @@ times 16 db 0 ; partition entry 3
 times 16 db 0 ; partition entry 4
 
 dw 0xaa55 ; boot signature
+
+include "src/boot_stage_2.asm"
