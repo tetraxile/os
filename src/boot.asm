@@ -26,10 +26,6 @@ start:
     mov ss, ax
     mov sp, 0x7c00
 
-    mov es, ax
-    mov bp, strings.starting_os
-    call bios_print_string
-
     ; check if cpuid is supported
     pushfd
     pushfd
@@ -61,13 +57,7 @@ start:
     mov si, dap.kernel
     call read_sectors_from_disk
 
-    xor ax, ax
-    mov es, ax
-    mov bp, strings.loaded_kernel
-    call bios_print_string
-
     jmp enter_protected_mode
-
 
 .no_cpuid:
     mov bp, strings.no_cpuid
@@ -83,7 +73,6 @@ start:
 ; read a contiguous group of sectors from the boot drive
 ; * si - pointer to disk address packet (DAP)
 read_sectors_from_disk:
-    ; load kernel into memory
     mov ah, 0x42 ; extended read sectors
     mov dl, [drive_number]
     int 0x13
@@ -170,8 +159,6 @@ cursor_y db 0
 drive_number db 0
 
 strings:
-.starting_os db 11, "starting OS"
-.loaded_kernel db 13, "loaded kernel"
 .disk_error db 10, "disk error"
 .no_cpuid db 8, "no CPUID"
 .no_long_mode db 12, "no long mode"
@@ -181,12 +168,12 @@ times 0x198-($-$$) db 0
 ; disk address packets (https://en.wikipedia.org/wiki/INT_13H#INT_13h_AH=42h:_Extended_Read_Sectors_From_Drive)
 dap:
 .boot_stage_2:
-    db 0x10
-    db 0
-    dw 0x2
-    dd 0x00007e00
-    dd 1
-    dd 0
+    db 0x10       ; size of packet
+    db 0          ; unused
+    dw 0x2        ; number of sectors
+    dd 0x00007e00 ; memory buffer (0000h:7e00h)
+    dd 1          ; starting LBA 0:31
+    dd 0          ; starting LBA 32:47
 
 .kernel:
     db 0x10       ; size of packet
@@ -195,6 +182,8 @@ dap:
     dd 0x10000000 ; memory buffer (1000h:0000h)
     dd 3          ; starting LBA 0:31
     dd 0          ; starting LBA 32:47
+
+times 0x1b8-($-$$) db 0
 
 dd 0xdead1979 ; disk signature
 dw 0x0000     ; reserved
