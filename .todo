@@ -1,5 +1,7 @@
-- [ ] switch to long mode
+- [ ] switch to long mode (https://wiki.osdev.org/Setting_Up_Long_Mode) (https://wiki.osdev.org/Entering_Long_Mode_Directly)
     - [ ] add paging
+    - [ ] convert GDT/IDT to 64-bit
+    - [ ] TSS? LDT? what else do i need
     - [ ] provide both x86 and x86-64 versions? might need to wait until higher level language
 
 - [ ] implement filesystem
