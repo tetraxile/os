@@ -26,6 +26,8 @@ start:
     mov ss, ax
     mov sp, 0x7c00
 
+    call generate_memory_map
+
     ; load bootloader stage 2 and kernel into memory
     mov si, dap.boot_stage_2
     call read_sectors_from_disk
@@ -49,6 +51,71 @@ read_sectors_from_disk:
 
 .disk_error:
     mov bp, strings.disk_error
+    call bios_print_string
+    hlt
+
+
+generate_memory_map:
+    push edi
+    push ebx
+    push ebp
+
+    mov di, 0x2004
+    xor ebx, ebx
+    xor ebp, ebp
+
+    mov dword [es:di + 20], 1
+    mov eax, 0xe820
+    mov ecx, 24
+    mov edx, 0x534d4150
+    int 0x15
+
+    jc .failed
+    mov edx, 0x534d4150
+    cmp eax, edx
+    jne .failed
+    test ebx, ebx
+    jz .failed
+    jmp .check_skip
+
+.loop:
+    mov dword [es:di + 20], 1
+    mov eax, 0xe820
+    mov ecx, 24
+    int 0x15
+
+    jc .end
+    mov edx, 0x534d4150
+
+.check_skip:
+    jcxz .skip_entry
+    cmp cl, 20
+    jbe .no_acpi
+    test byte [es:di + 20], 1
+    je .skip_entry
+
+.no_acpi:
+    mov ecx, [es:di + 8]
+    or ecx, [es:di + 12]
+    jz .skip_entry
+    inc ebp
+    add di, 24
+
+.skip_entry:
+    test ebx, ebx
+    jnz .loop
+
+.end:
+    mov [0x2000], ebp
+
+    pop ebp
+    pop ebx
+    pop edi
+    cli
+    ret
+
+.failed:
+    mov bp, strings.memory_map_error
     call bios_print_string
     hlt
 
@@ -82,6 +149,7 @@ drive_number db 0
 
 strings:
 .disk_error db 10, "disk error"
+.memory_map_error db 16, "memory map error"
 .no_cpuid db 8, "no CPUID"
 .no_long_mode db 12, "no long mode"
 
