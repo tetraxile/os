@@ -62,6 +62,8 @@ print_string:
 ; in hexadecimal at the cursor and update the cursor
 ; * al - unsigned 8-bit integer
 print_u8_hex:
+    push ebx
+
     mov bl, al
     mov cl, 4
 
@@ -90,6 +92,7 @@ print_u8_hex:
     jmp .loop
 
 .end:
+    pop ebx
     ret
 
 
@@ -97,6 +100,8 @@ print_u8_hex:
 ; in binary at the cursor and update the cursor
 ; * al - unsigned 8-bit integer
 print_u8_binary:
+    push ebx
+
     mov bl, al
     mov cl, 7
 
@@ -119,6 +124,7 @@ print_u8_binary:
     jmp .loop
 
 .end:
+    pop ebx
     ret
 
 
@@ -126,6 +132,7 @@ print_u8_binary:
 ; in hexadecimal at the cursor and update the cursor
 ; * ax - unsigned 16-bit integer
 print_u16_hex:
+    push ebx
     mov bx, ax
     mov cl, 12
 
@@ -154,6 +161,7 @@ print_u16_hex:
     jmp .loop
 
 .end:
+    pop ebx
     ret
 
 
@@ -161,6 +169,7 @@ print_u16_hex:
 ; in hexadecimal at the cursor and update the cursor
 ; * eax - unsigned 32-bit integer
 print_u32_hex:
+    push ebx
     mov ebx, eax
     mov cl, 28
 
@@ -189,6 +198,7 @@ print_u32_hex:
     jmp .loop
 
 .end:
+    pop ebx
     ret
 
 

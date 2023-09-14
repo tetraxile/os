@@ -1,0 +1,4 @@
+the stack is cleaned up by the callee
+
+caller-saved registers: eax, ecx, edx
+callee-saved registers: ebx, esi, edi, ebp, esp
