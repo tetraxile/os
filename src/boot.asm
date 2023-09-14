@@ -55,6 +55,8 @@ read_sectors_from_disk:
     hlt
 
 
+; generate a map of the available memory using BIOS interrupt 15h/ax=e820h
+; and store it at address 0x2000, prefixed by the number of map entries (u32)
 generate_memory_map:
     push edi
     push ebx
