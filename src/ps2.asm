@@ -47,6 +47,8 @@ PORT_TEST_DATA_LOW   = 0x03
 PORT_TEST_DATA_HIGH  = 0x04
 
 ps2_init:
+    push ebx
+
     ; disable both devices
     mov al, COMMAND_DISABLE_PORT_1
     out REG_COMMAND, al
@@ -119,6 +121,7 @@ ps2_init:
     mov al, bl
     out REG_DATA, al
 
+    pop ebx
     ret
 
 .message_failed_self_test:
