@@ -1,3 +1,7 @@
+VGA_TEXT_OFFSET = 0xb8000
+SCREEN_WIDTH = 80
+SCREEN_HEIGHT = 25
+
 ; write a cp437 character to the VGA text buffer at the cursor
 ; and update the cursor (white text, black background)
 ; * al - character to print
@@ -11,26 +15,43 @@ print_char:
 
     ; calculate cursor offset in VGA text buffer
     movzx eax, byte [cursor_y]
-    mov edx, 160
+    mov edx, SCREEN_WIDTH * 2
     mul edx
     movzx edx, byte [cursor_x]
     shl edx, 1
     add eax, edx
 
     ; write character and color into VGA text buffer
-    mov edi, 0xb8000
+    mov edi, VGA_TEXT_OFFSET
     add edi, eax
     mov byte [edi], cl
     mov byte [edi + 1], 0x0f
 
     ; update cursor horizontal position
     inc byte [cursor_x]
-    cmp byte [cursor_x], 80
+    cmp byte [cursor_x], SCREEN_WIDTH
     jl .end
 
 .newline:
     mov byte [cursor_x], 0
     inc byte [cursor_y]
+    cmp byte [cursor_y], SCREEN_HEIGHT
+    jl .end
+
+    ; shift lines up if out of vertical space
+    mov esi, VGA_TEXT_OFFSET + SCREEN_WIDTH * 2
+    mov edi, VGA_TEXT_OFFSET
+    mov ecx, (SCREEN_HEIGHT - 1) * SCREEN_WIDTH
+    rep movsw
+
+    ; clear the bottom line
+    mov edi, VGA_TEXT_OFFSET + (SCREEN_HEIGHT - 1) * SCREEN_WIDTH * 2
+    mov ax, 0x0f00
+    mov ecx, SCREEN_WIDTH
+    rep stosw
+
+    ; move the cursor back to the bottom line
+    dec byte [cursor_y]
 
 .end:
     pop edi
