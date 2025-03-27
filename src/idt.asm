@@ -1,91 +1,91 @@
 ; idt.asm - Interrupt Descriptor Table
 
 idt_init:
-    mov eax, division_error_handler
+    mov eax, exc_division_error_handler
     mov ecx, 0x0
     call idt_entry_init
 
-    mov eax, debug_exception_handler
+    mov eax, exc_debug_exception_handler
     mov ecx, 0x1
     call idt_entry_init
 
-    mov eax, nmi_handler
+    mov eax, exc_nmi_handler
     mov ecx, 0x2
     call idt_entry_init
 
-    mov eax, breakpoint_handler
+    mov eax, exc_breakpoint_handler
     mov ecx, 0x3
     call idt_entry_init
 
-    mov eax, overflow_handler
+    mov eax, exc_overflow_handler
     mov ecx, 0x4
     call idt_entry_init
     
-    mov eax, bound_range_exceeded_handler
+    mov eax, exc_bound_range_exceeded_handler
     mov ecx, 0x5
     call idt_entry_init
 
-    mov eax, invalid_opcode_handler
+    mov eax, exc_invalid_opcode_handler
     mov ecx, 0x6
     call idt_entry_init
     
-    mov eax, device_not_available_handler
+    mov eax, exc_device_not_available_handler
     mov ecx, 0x7
     call idt_entry_init
 
-    mov eax, double_fault_handler
+    mov eax, exc_double_fault_handler
     mov ecx, 0x8
     call idt_entry_init
 
-    mov eax, invalid_tss_handler
+    mov eax, exc_invalid_tss_handler
     mov ecx, 0xa
     call idt_entry_init
 
-    mov eax, segment_not_present_handler
+    mov eax, exc_segment_not_present_handler
     mov ecx, 0xb
     call idt_entry_init
 
-    mov eax, stack_segment_fault_handler
+    mov eax, exc_stack_segment_fault_handler
     mov ecx, 0xc
     call idt_entry_init
 
-    mov eax, general_protection_fault_handler
+    mov eax, exc_general_protection_fault_handler
     mov ecx, 0xd
     call idt_entry_init
 
-    mov eax, page_fault_handler
+    mov eax, exc_page_fault_handler
     mov ecx, 0xe
     call idt_entry_init
 
-    mov eax, x87_float_exception_handler
+    mov eax, exc_x87_float_exception_handler
     mov ecx, 0x10
     call idt_entry_init
 
-    mov eax, alignment_check_handler
+    mov eax, exc_alignment_check_handler
     mov ecx, 0x11
     call idt_entry_init
 
-    mov eax, machine_check_handler
+    mov eax, exc_machine_check_handler
     mov ecx, 0x12
     call idt_entry_init
 
-    mov eax, simd_float_exception_handler
+    mov eax, exc_simd_float_exception_handler
     mov ecx, 0x13
     call idt_entry_init
 
-    mov eax, virtualisation_exception_handler
+    mov eax, exc_virtualisation_exception_handler
     mov ecx, 0x14
     call idt_entry_init
 
-    mov eax, control_protection_exception_handler
+    mov eax, exc_control_protection_exception_handler
     mov ecx, 0x15
     call idt_entry_init
 
-    mov eax, pit_irq_handler
+    mov eax, irq_pit_handler
     mov ecx, 0x20
     call idt_entry_init
 
-    mov eax, keyboard_irq_handler
+    mov eax, irq_keyboard_handler
     mov ecx, 0x21
     call idt_entry_init
 
@@ -165,56 +165,56 @@ idt_entry_init:
 ; ========== EXCEPTIONS ==========
 
 ; division error - divided a number by 0 using DIV or IDIV instruction
-division_error_handler:
+exc_division_error_handler:
     mov eax, exc_message.division_error
     call print_string
     cli
     hlt
 
 ; debug exception - various causes
-debug_exception_handler:
+exc_debug_exception_handler:
     mov eax, exc_message.debug_exception
     call print_string
     cli
     hlt
 
 ; non-maskable interrupt - hardware failure; watchdog timer
-nmi_handler:
+exc_nmi_handler:
     mov eax, exc_message.nmi
     call print_string
     cli
     hlt
 
 ; breakpoint - INT3 instruction
-breakpoint_handler:
+exc_breakpoint_handler:
     mov eax, exc_message.breakpoint
     call print_string
     cli
     hlt
 
 ; overflow - INTO instruction if RFLAGS.OF = 1
-overflow_handler:
+exc_overflow_handler:
     mov eax, exc_message.overflow
     call print_string
     cli
     hlt
 
 ; bound range exceeded - BOUND instruction failed (input is out of provided array bounds)
-bound_range_exceeded_handler:
+exc_bound_range_exceeded_handler:
     mov eax, exc_message.bound_range_exceeded
     call print_string
     cli
     hlt
 
 ; invalid opcode - invalid/undefined opcode/prefixes (can use UD instruction)
-invalid_opcode_handler:
+exc_invalid_opcode_handler:
     mov eax, exc_message.invalid_opcode
     call print_string
     cli
     hlt
 
 ; device not available - FPU instruction attempted with no FPU
-device_not_available_handler:
+exc_device_not_available_handler:
     mov eax, exc_message.device_not_available
     call print_string
     cli
@@ -222,7 +222,7 @@ device_not_available_handler:
 
 ; double fault - unhandled exception; exception inside exception handler
 ; * eax: error code (always zero)
-double_fault_handler:
+exc_double_fault_handler:
     mov eax, exc_message.double_fault
     call print_string
 
@@ -233,7 +233,7 @@ double_fault_handler:
 
 ; invalid task state segment - invalid segment selector during task switch
 ; * eax: segment selector index
-invalid_tss_handler:
+exc_invalid_tss_handler:
     mov eax, exc_message.invalid_tss
     call print_string
 
@@ -244,7 +244,7 @@ invalid_tss_handler:
 
 ; segment not present - loaded (non-stack) segment with present bit = 0
 ; * eax: segment selector index
-segment_not_present_handler:
+exc_segment_not_present_handler:
     mov eax, exc_message.segment_not_present
     call print_string
 
@@ -255,7 +255,7 @@ segment_not_present_handler:
 
 ; stack segment fault - loaded stack segment with present bit = 0, or PUSH/POP with malformed stack address
 ; * eax: stack segment selector index
-stack_segment_fault_handler:
+exc_stack_segment_fault_handler:
     mov eax, exc_message.stack_segment_fault
     call print_string
 
@@ -266,7 +266,7 @@ stack_segment_fault_handler:
 
 ; general protection fault - various causes
 ; * eax: segment selector index, if exception is segment related
-general_protection_fault_handler:
+exc_general_protection_fault_handler:
     mov eax, exc_message.general_protection_fault
     call print_string
 
@@ -277,7 +277,7 @@ general_protection_fault_handler:
 
 ; page fault - page dir/table not present; protection check failed; page dir/table reserved bit = 1
 ; * eax: page fault error code
-page_fault_handler:
+exc_page_fault_handler:
     mov eax, exc_message.page_fault
     call print_string
 
@@ -287,14 +287,14 @@ page_fault_handler:
     hlt
 
 ; x87 floating point exception - FWAIT/WAIT executed when CR0.NE = 1 and x87 floating point exception pending
-x87_float_exception_handler:
+exc_x87_float_exception_handler:
     mov eax, exc_message.x87_float_exception
     call print_string
     cli
     hlt
 
 ; alignment check - unaligned memory access when alignment checking is enabled (CR0.AM and RFLAGS.AC = 1)
-alignment_check_handler:
+exc_alignment_check_handler:
     mov eax, exc_message.alignment_check
     call print_string
 
@@ -304,26 +304,26 @@ alignment_check_handler:
     hlt
 
 ; machine check - model specific errors if CR4.MCE = 1
-machine_check_handler:
+exc_machine_check_handler:
     mov eax, exc_message.machine_check
     call print_string
     cli
     hlt
 
 ; SIMD float exception - unmasked 128-bit floating point exception when CR4.OSXMMEXCPT = 1
-simd_float_exception_handler:
+exc_simd_float_exception_handler:
     mov eax, exc_message.simd_float_exception
     call print_string
     cli
     hlt
 
-virtualisation_exception_handler:
+exc_virtualisation_exception_handler:
     mov eax, exc_message.virtualisation_exception
     call print_string
     cli
     hlt
 
-control_protection_exception_handler:
+exc_control_protection_exception_handler:
     mov eax, exc_message.control_protection_exception
     call print_string
 
@@ -336,7 +336,7 @@ control_protection_exception_handler:
 ; ========== IRQS ==========
 
 ; programmable interrupt timer
-pit_irq_handler:
+irq_pit_handler:
     ; mov al, '.'
     ; call print_char
 
@@ -345,8 +345,8 @@ pit_irq_handler:
     iret
 
 ; PS/2 keyboard
-keyboard_irq_handler:
-    call ps2_kbd_handler
+irq_keyboard_handler:
+    call keyboard_handle_irq
 
     mov al, 0x1
     call pic_send_eoi

@@ -13,6 +13,9 @@ print_char:
     cmp al, 0xa
     je .newline
 
+    cmp al, 0x7f
+    je .backspace
+
     mov cl, al
 
     ; calculate cursor offset in VGA text buffer
@@ -58,6 +61,29 @@ print_char:
 .end:
     pop edi
     ret
+
+.backspace:
+    cmp byte [cursor_x], 0
+    je .end
+
+    dec byte [cursor_x]
+    mov cl, al
+
+    ; calculate cursor offset in VGA text buffer
+    movzx eax, byte [cursor_y]
+    mov edx, SCREEN_WIDTH * 2
+    mul edx
+    movzx edx, byte [cursor_x]
+    shl edx, 1
+    add eax, edx
+
+    ; write character and color into VGA text buffer
+    mov edi, VGA_TEXT_OFFSET
+    add edi, eax
+    mov byte [edi], 0x00
+    mov byte [edi + 1], 0x0f
+
+    jmp .end
 
 
 ; write a cp437 string to the VGA text buffer at the cursor
