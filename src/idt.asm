@@ -1,3 +1,5 @@
+; idt.asm - Interrupt Descriptor Table
+
 idt_init:
     mov eax, division_error_handler
     mov ecx, 0x0
@@ -35,10 +37,6 @@ idt_init:
     mov ecx, 0x8
     call idt_entry_init
 
-    mov eax, coprocessor_segment_overrun_handler
-    mov ecx, 0x9
-    call idt_entry_init
-
     mov eax, invalid_tss_handler
     mov ecx, 0xa
     call idt_entry_init
@@ -59,10 +57,6 @@ idt_init:
     mov ecx, 0xe
     call idt_entry_init
 
-    mov eax, int_15_handler
-    mov ecx, 0xf
-    call idt_entry_init
-
     mov eax, x87_float_exception_handler
     mov ecx, 0x10
     call idt_entry_init
@@ -79,7 +73,7 @@ idt_init:
     mov ecx, 0x13
     call idt_entry_init
 
-    mov eax, virtualization_exception_handler
+    mov eax, virtualisation_exception_handler
     mov ecx, 0x14
     call idt_entry_init
 
@@ -93,10 +87,6 @@ idt_init:
 
     mov eax, keyboard_irq_handler
     mov ecx, 0x21
-    call idt_entry_init
-
-    mov eax, irq_2_handler
-    mov ecx, 0x22
     call idt_entry_init
 
     mov eax, irq_3_handler
@@ -154,7 +144,7 @@ idt_init:
     ret
 
 
-; initialize an IDT entry to point at a handler function
+; initialise an IDT entry to point at a handler function
 ; * eax - pointer to handler function
 ; * ecx - IDT index
 idt_entry_init:
@@ -174,54 +164,64 @@ idt_entry_init:
 
 ; ========== EXCEPTIONS ==========
 
+; division error - divided a number by 0 using DIV or IDIV instruction
 division_error_handler:
     mov eax, exc_message.division_error
     call print_string
     cli
     hlt
 
+; debug exception - various causes
 debug_exception_handler:
     mov eax, exc_message.debug_exception
     call print_string
     cli
     hlt
 
+; non-maskable interrupt - hardware failure; watchdog timer
 nmi_handler:
     mov eax, exc_message.nmi
     call print_string
     cli
     hlt
 
+; breakpoint - INT3 instruction
 breakpoint_handler:
     mov eax, exc_message.breakpoint
     call print_string
     cli
     hlt
 
+; overflow - INTO instruction if RFLAGS.OF = 1
 overflow_handler:
     mov eax, exc_message.overflow
     call print_string
     cli
     hlt
 
+; bound range exceeded - BOUND instruction failed (input is out of provided array bounds)
 bound_range_exceeded_handler:
     mov eax, exc_message.bound_range_exceeded
     call print_string
     cli
     hlt
 
+; invalid opcode - invalid/undefined opcode/prefixes (can use UD instruction)
 invalid_opcode_handler:
     mov eax, exc_message.invalid_opcode
     call print_string
     cli
     hlt
 
+; device not available - FPU instruction attempted with no FPU
 device_not_available_handler:
     mov eax, exc_message.device_not_available
     call print_string
     cli
     hlt
 
+; double fault - unhandled exception; exception inside exception handler
+; * eax: error code (always zero)
 double_fault_handler:
     mov eax, exc_message.double_fault
     call print_string
@@ -231,12 +231,8 @@ double_fault_handler:
     cli
     hlt
 
-coprocessor_segment_overrun_handler:
-    mov eax, exc_message.coprocessor_segment_overrun
-    call print_string
-    cli
-    hlt
-
+; invalid task state segment - invalid segment selector during task switch
+; * eax: segment selector index
 invalid_tss_handler:
     mov eax, exc_message.invalid_tss
     call print_string
@@ -246,6 +242,8 @@ invalid_tss_handler:
     cli
     hlt
 
+; segment not present - loaded (non-stack) segment with present bit = 0
+; * eax: segment selector index
 segment_not_present_handler:
     mov eax, exc_message.segment_not_present
     call print_string
@@ -255,6 +253,8 @@ segment_not_present_handler:
     cli
     hlt
 
+; stack segment fault - loaded stack segment with present bit = 0, or PUSH/POP with malformed stack address
+; * eax: stack segment selector index
 stack_segment_fault_handler:
     mov eax, exc_message.stack_segment_fault
     call print_string
@@ -264,6 +264,8 @@ stack_segment_fault_handler:
     cli
     hlt
 
+; general protection fault - various causes
+; * eax: segment selector index, if exception is segment related
 general_protection_fault_handler:
     mov eax, exc_message.general_protection_fault
     call print_string
@@ -273,6 +275,8 @@ general_protection_fault_handler:
     cli
     hlt
 
+; page fault - page dir/table not present; protection check failed; page dir/table reserved bit = 1
+; * eax: page fault error code
 page_fault_handler:
     mov eax, exc_message.page_fault
     call print_string
@@ -282,18 +286,14 @@ page_fault_handler:
     cli
     hlt
 
-int_15_handler:
-    mov eax, exc_message.int_15
-    call print_string
-    cli
-    hlt
-
+; x87 floating point exception - FWAIT/WAIT executed when CR0.NE = 1 and x87 floating point exception pending
 x87_float_exception_handler:
     mov eax, exc_message.x87_float_exception
     call print_string
     cli
     hlt
 
+; alignment check - unaligned memory access when alignment checking is enabled (CR0.AM and RFLAGS.AC = 1)
 alignment_check_handler:
     mov eax, exc_message.alignment_check
     call print_string
@@ -303,20 +303,22 @@ alignment_check_handler:
     cli
     hlt
 
+; machine check - model specific errors if CR4.MCE = 1
 machine_check_handler:
     mov eax, exc_message.machine_check
     call print_string
     cli
     hlt
 
+; SIMD float exception - unmasked 128-bit floating point exception when CR4.OSXMMEXCPT = 1
 simd_float_exception_handler:
     mov eax, exc_message.simd_float_exception
     call print_string
     cli
     hlt
 
-virtualization_exception_handler:
-    mov eax, exc_message.virtualization_exception
+virtualisation_exception_handler:
+    mov eax, exc_message.virtualisation_exception
     call print_string
     cli
     hlt
@@ -333,190 +335,96 @@ control_protection_exception_handler:
 
 ; ========== IRQS ==========
 
+; programmable interrupt timer
 pit_irq_handler:
     ; mov al, '.'
     ; call print_char
 
     mov al, 0x0
-    call send_eoi
+    call pic_send_eoi
     iret
 
-; assumes scancode set 1 (XT)
+; PS/2 keyboard
 keyboard_irq_handler:
-    push eax
-    push edx
-    
-    xor eax, eax
-    in al, 0x60
-    mov edx, eax
+    call ps2_kbd_handler
 
-    test eax, 0x80
-    setnz byte [.is_released]
-
-    and eax, 0x7f
-
-    cmp byte [.pause_break], 1
-    je .pause_break_byte_1
-
-    cmp byte [.pause_break], 2
-    je .pause_break_byte_2
-
-    cmp byte [.is_extended], 1
-    je .read_extended_scancode
-
-    cmp edx, 0xe1
-    je .set_pause_break
-
-    cmp edx, 0xe0
-    je .set_extended
-
-    mov edx, standard_scancode_map
-    mov al, [edx + eax]
-    jmp .use_keycode
-
-.set_extended:
-    mov byte [.is_extended], 1
-    jmp .end
-
-.read_extended_scancode:
-    cmp eax, 0x2a
-    je .set_prtsc
-
-    cmp eax, 0x37
-    je .prtsc_byte_2
-
-    mov edx, extended_scancode_map
-    mov al, [edx + eax]
-    jmp .use_keycode
-
-.set_prtsc:
-    mov al, [.is_released]
-    xor al, 1
-    mov byte [.is_prtsc_pressed], al
-    mov byte [.is_extended], 0
-    jmp .end
-
-.prtsc_byte_2:
-    mov edx, 0x0d
-    mov eax, 0xff
-    cmp byte [.is_prtsc_pressed], 1
-    cmove eax, edx
-    jmp .use_keycode
-
-.set_pause_break:
-    mov byte [.pause_break], 1
-    jmp .end
-
-.pause_break_byte_1:
-    cmp eax, 0x1d
-    je .inc_pause_break
-    
-    mov al, 0xff
-    jmp .use_keycode
-
-.inc_pause_break:
-    inc byte [.pause_break]
-    jmp .end
-
-.pause_break_byte_2:
-    mov edx, 0x0f
-    cmp eax, 0x45
-    mov eax, 0xff
-    cmove eax, edx
-    jmp .use_keycode
-
-.use_keycode:
-    call print_u8_hex
-
-    mov al, ' '
-    call print_char
-
-    ; make sure not to clear `is_prtsc_pressed`!
-    ; releasing the prtsc key relies on it keeping its value.
-    mov word [.is_extended], 0
-    mov byte [.pause_break], 0
-
-.end:
-    mov al, 1
-    call send_eoi
-
-    pop edx
-    pop eax
+    mov al, 0x1
+    call pic_send_eoi
     iret
 
-.is_extended      db 0
-.is_released      db 0
-.pause_break      db 0
-.is_prtsc_pressed db 0
-
-irq_2_handler:
-    mov al, 0x2
-    call send_eoi
-    iret
-
+; COM2
 irq_3_handler:
     mov al, 0x3
-    call send_eoi
+    call pic_send_eoi
     iret
 
+; COM1
 irq_4_handler:
     mov al, 0x4
-    call send_eoi
+    call pic_send_eoi
     iret
 
+; LPT2
 irq_5_handler:
     mov al, 0x5
-    call send_eoi
+    call pic_send_eoi
     iret
 
+; floppy disk
 irq_6_handler:
     mov al, 0x6
-    call send_eoi
+    call pic_send_eoi
     iret
 
+; LPT1 / spurious interrupt (shouldn't send EOI!)
 irq_7_handler:
     mov al, 0x7
-    call send_eoi
+    call pic_send_eoi
     iret
 
+; CMOS real-time clock
 irq_8_handler:
     mov al, 0x8
-    call send_eoi
+    call pic_send_eoi
     iret
 
 irq_9_handler:
     mov al, 0x9
-    call send_eoi
+    call pic_send_eoi
     iret
 
 irq_10_handler:
     mov al, 0xa
-    call send_eoi
+    call pic_send_eoi
     iret
 
 irq_11_handler:
     mov al, 0xb
-    call send_eoi
+    call pic_send_eoi
     iret
 
+; PS/2 mouse
 irq_12_handler:
     mov al, 0xc
-    call send_eoi
+    call pic_send_eoi
     iret
 
+; FPU / coprocessor / inter-processor
 irq_13_handler:
     mov al, 0xd
-    call send_eoi
+    call pic_send_eoi
     iret
 
+; primary ATA hard disk
 irq_14_handler:
     mov al, 0xe
-    call send_eoi
+    call pic_send_eoi
     iret
 
+; secondary ATA hard disk
 irq_15_handler:
     mov al, 0xf
-    call send_eoi
+    call pic_send_eoi
     iret
 
 
@@ -530,18 +438,16 @@ exc_message:
 .invalid_opcode db "EXCEPTION: invalid opcode", 0x0a, 0
 .device_not_available db "EXCEPTION: device not available", 0x0a, 0
 .double_fault db "EXCEPTION: double fault", 0x0a, 0
-.coprocessor_segment_overrun db "EXCEPTION: coprocessor segment overrun", 0x0a, 0
 .invalid_tss db "EXCEPTION: invalid tss", 0x0a, 0
 .segment_not_present db "EXCEPTION: segment not present", 0x0a, 0
 .stack_segment_fault db "EXCEPTION: stack segment fault", 0x0a, 0
 .general_protection_fault db "EXCEPTION: general protection fault", 0x0a, 0
 .page_fault db "EXCEPTION: page fault", 0x0a, 0
-.int_15 db "EXCEPTION: int 15", 0x0a, 0
 .x87_float_exception db "EXCEPTION: x87 float exception", 0x0a, 0
 .alignment_check db "EXCEPTION: alignment check", 0x0a, 0
 .machine_check db "EXCEPTION: machine check", 0x0a, 0
 .simd_float_exception db "EXCEPTION: simd float exception", 0x0a, 0
-.virtualization_exception db "EXCEPTION: virtualization exception", 0x0a, 0
+.virtualisation_exception db "EXCEPTION: virtualisation exception", 0x0a, 0
 .control_protection_exception db "EXCEPTION: control protection exception", 0x0a, 0
 
 

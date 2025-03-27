@@ -1,3 +1,5 @@
+; print.asm - VGA text mode print utilities
+
 VGA_TEXT_OFFSET = 0xb8000
 SCREEN_WIDTH = 80
 SCREEN_HEIGHT = 25

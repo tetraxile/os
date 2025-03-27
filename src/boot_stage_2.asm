@@ -1,3 +1,5 @@
+; boot_stage_2.asm - stage 2 bootloader
+
 KERNEL_ADDR = 0x10000
 
 start_stage_2:
@@ -10,8 +12,8 @@ start_stage_2:
     jmp .halt
 
 
-; check if the `cpuid` instruction is supported, and whether
-; the LM (long mode) flag is set. errors if not
+; check if the `cpuid` instruction is supported, and whether the LM (long mode) flag is set.
+; errors if either one fails.
 check_cpuid:
     ; check if cpuid is supported
     pushfd

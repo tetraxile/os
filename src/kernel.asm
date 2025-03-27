@@ -1,3 +1,5 @@
+; kernel.asm - protected mode kernel
+
 use32
 org 0x10000
 
@@ -10,14 +12,14 @@ include "src/ps2.asm"
 
 kernel_main:
     call enable_a20
-    call remap_pic_offsets
+    call pic_init
 
     call ps2_init
-    mov eax, notification.initialized_ps2
+    mov eax, notification.initialised_ps2
     call print_string
 
     call idt_init
-    mov eax, notification.initialized_idt
+    mov eax, notification.initialised_idt
     call print_string
 
     sti
@@ -28,7 +30,7 @@ kernel_main:
 
 
 notification:
-.initialized_idt db "initialized IDT", 0xa, 0
-.initialized_ps2 db "initialized PS/2 controller", 0xa, 0
+.initialised_idt db "initialised IDT", 0xa, 0
+.initialised_ps2 db "initialised PS/2 controller", 0xa, 0
 
 times 0x4000-($-$$) db 0

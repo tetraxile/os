@@ -1,3 +1,5 @@
+; gdt.asm - Global Descriptor Table
+
 GDT_start:
 
 GDT_null:
