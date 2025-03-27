@@ -13,7 +13,10 @@ print_char:
     cmp al, 0xa
     je .newline
 
-    cmp al, 0x7f
+    cmp al, 0x9
+    je .tab
+
+    cmp al, 0x08
     je .backspace
 
     mov cl, al
@@ -34,6 +37,8 @@ print_char:
 
     ; update cursor horizontal position
     inc byte [cursor_x]
+
+.check_x_pos:
     cmp byte [cursor_x], SCREEN_WIDTH
     jl .end
 
@@ -84,6 +89,12 @@ print_char:
     mov byte [edi + 1], 0x0f
 
     jmp .end
+
+.tab:
+    add [cursor_x], 4
+    and [cursor_x], 11111100b
+    jmp .check_x_pos
+
 
 
 ; write a cp437 string to the VGA text buffer at the cursor
