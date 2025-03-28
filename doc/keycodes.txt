@@ -1,5 +1,6 @@
 3 bits for row, 5 bits for column.
 based on ISO 105-key layout + irish layout
+names based on ISO 9995 and XKB keycode names
 
 hex  | binary    | name | character
 -----+-----------+------+------------
