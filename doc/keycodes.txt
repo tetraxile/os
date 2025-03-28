@@ -123,7 +123,7 @@ hex  | binary    | name | character
 0xc5 | 110 00101 | MUTE | mute audio
 0xc6 | 110 00110 | PLAY | play audio
 0xc7 | 110 00111 | STOP | stop audio
-0xc8 | 110 01000 | VOL- | volume down
-0xc9 | 110 01001 | VOL+ | volume up
+0xc8 | 110 01000 | VOLD | volume down
+0xc9 | 110 01001 | VOLU | volume up
      |           |      | 
 0xff | 111 11111 |      | unsupported scancode
