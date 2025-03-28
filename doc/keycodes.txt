@@ -125,5 +125,16 @@ hex  | binary    | name | character
 0xc7 | 110 00111 | STOP | stop audio
 0xc8 | 110 01000 | VOLD | volume down
 0xc9 | 110 01001 | VOLU | volume up
+0xca | 110 01010 | MYPC | my computer
+0xcb | 110 01011 | EMAI | email
+0xcc | 110 01100 | MDIA | media select
+0xcd | 110 01101 | CALC | calculator
+0xce | 110 01110 | WHME | WWW home
+0xcf | 110 01111 | WSRC | WWW search
+0xd0 | 110 10000 | WFAV | WWW favorites
+0xd1 | 110 10001 | WREF | WWW refresh
+0xd2 | 110 10010 | WSTP | WWW stop
+0xd3 | 110 10011 | WFWD | WWW forward
+0xd4 | 110 10100 | WBCK | WWW back
      |           |      | 
 0xff | 111 11111 |      | unsupported scancode
