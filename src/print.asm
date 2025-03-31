@@ -26,8 +26,7 @@ print_char:
     mov edx, SCREEN_WIDTH * 2
     mul edx
     movzx edx, byte [cursor_x]
-    shl edx, 1
-    add eax, edx
+    lea eax, [eax + edx * 2]
 
     ; write character and color into VGA text buffer
     mov edi, VGA_TEXT_OFFSET
@@ -79,8 +78,7 @@ print_char:
     mov edx, SCREEN_WIDTH * 2
     mul edx
     movzx edx, byte [cursor_x]
-    shl edx, 1
-    add eax, edx
+    lea eax, [eax + edx * 2]
 
     ; write character and color into VGA text buffer
     mov edi, VGA_TEXT_OFFSET

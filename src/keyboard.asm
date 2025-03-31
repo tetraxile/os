@@ -29,8 +29,7 @@ keyboard_handle_irq:
     cmp edx, 0xe0
     je .set_extended
 
-    mov edx, standard_scancode_map
-    mov al, [edx + eax]
+    mov al, [standard_scancode_map + eax]
     jmp .use_keycode
 
 .set_extended:
@@ -44,8 +43,7 @@ keyboard_handle_irq:
     cmp eax, 0x37
     je .prtsc_byte_2
 
-    mov edx, extended_scancode_map
-    mov al, [edx + eax]
+    mov al, [extended_scancode_map + eax]
     jmp .use_keycode
 
 .set_prtsc:

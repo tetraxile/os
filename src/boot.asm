@@ -57,7 +57,7 @@ read_sectors_from_disk:
     mov dl, [drive_number]
     mov ah, 0x42 ; extended read sectors
     int 0x13
-    jc .disk_error
+    jc .disk_error ; carry flag is set if an error occurred reading from disk; error code is stored in `ah`
     cmp ah, 0
     jnz .disk_error
     ret
