@@ -346,7 +346,7 @@ irq_pit_handler:
 
 ; PS/2 keyboard
 irq_keyboard_handler:
-    call keyboard_handle_irq
+    call kbd_handle_irq
 
     mov al, 0x1
     call pic_send_eoi

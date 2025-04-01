@@ -22,11 +22,27 @@ kernel_main:
     mov eax, notification.initialised_idt
     call print_string
 
+    mov eax, kernel_key_event
+    call kbd_set_callback
+
     sti
 
 .halt:
     hlt
     jmp .halt
+
+
+; receive a key event from the keyboard driver
+; * eax: key event
+kernel_key_event:
+    call kbd_keyevent_char
+    cmp al, 0
+    jz .end
+
+    call print_char
+
+.end:
+    ret
 
 
 notification:

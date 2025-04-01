@@ -1,10 +1,11 @@
+; keyboard.asm - PS/2 keyboard driver
 
 ; assumes scancode set 1 (XT)
-keyboard_handle_irq:
+kbd_handle_irq:
     push eax
     push edx
 
-    ; read byte from keyboard controller    
+    ; read byte from keyboard controller
     xor eax, eax
     in al, PS2_DATA
     mov edx, eax
@@ -67,7 +68,7 @@ keyboard_handle_irq:
 .pause_break_byte_1:
     cmp eax, 0x1d
     je .inc_pause_break
-    
+
     mov al, 0xff
     jmp .use_keycode
 
@@ -82,9 +83,10 @@ keyboard_handle_irq:
     cmove eax, edx
 
 .use_keycode:
-    mov dl, [.is_released]
-    xor dl, 1
-    call keyboard_handle_key
+    movzx edx, byte [.is_released]
+    xor edx, 1
+    movzx eax, al
+    call kbd_make_keyevent
 
     ; make sure not to clear `is_prtsc_pressed`!
     ; releasing the prtsc key relies on it keeping its value.
@@ -102,10 +104,163 @@ keyboard_handle_irq:
 .is_prtsc_pressed db 0
 
 
+; write a new key press event to the keyboard input ring buffer.
+; * eax: keycode
+; * edx: is pressed (0 = released)
+; 
+; an event is a 4-byte structure defined as follows:
+; offset | size | description
+;  0x00  | 0x01 | keycode
+;  0x01  | 0x01 | type (released = 0, pressed = 1)
+;  0x02  | 0x01 | modifier bitmask (shift, capslock, ctrl, alt, numlock, meta, altgr)
+;  0x03  | 0x01 | reserved
+kbd_make_keyevent:
+    push ebx
+
+    mov ebx, eax
+    shl edx, 8
+    or ebx, edx
+    shr edx, 8
+
+    cmp eax, K_LFSH
+    je .shift
+    cmp eax, K_RTSH
+    je .shift
+
+    cmp eax, K_CAPS
+    je .capslock
+
+    cmp eax, K_LCTL
+    je .ctrl
+    cmp eax, K_RCTL
+    je .ctrl
+
+    cmp eax, K_LALT
+    je .alt
+
+    cmp eax, K_NMLK
+    je .numlock
+
+    cmp eax, K_LWIN
+    je .meta
+    cmp eax, K_RWIN
+    je .meta
+
+    cmp eax, K_RALT
+    je .altgr
+
+.write_mod_mask:
+    movzx eax, byte [.mod_mask]
+    shl eax, 16
+    or ebx, eax
+
+    mov edx, [kbd_event_callback]
+    jz .end
+
+    mov eax, ebx
+    call edx
+
+.end:
+    pop ebx
+    ret
+
+.shift:
+    mov cl, KBD_MOD_SHIFT
+    jmp .update_mod_mask
+
+.capslock:
+    cmp dl, 1
+    jne .write_mod_mask
+    xor [.is_capslock], 1
+    mov dl, [.is_capslock]
+    mov cl, KBD_MOD_CAPSLOCK
+    jmp .update_mod_mask
+
+.ctrl:
+    mov cl, KBD_MOD_CTRL
+    jmp .update_mod_mask
+
+.alt:
+    mov cl, KBD_MOD_ALT
+    jmp .update_mod_mask
+
+.numlock:
+    cmp dl, 1
+    jne .write_mod_mask
+    xor [.is_numlock], 1
+    mov dl, [.is_numlock]
+    mov cl, KBD_MOD_NUMLOCK
+    jmp .update_mod_mask
+
+.meta:
+    mov cl, KBD_MOD_META
+    jmp .update_mod_mask
+
+.altgr:
+    mov cl, KBD_MOD_ALTGR
+    jmp .update_mod_mask
+
+; set bit `idx` of mod_mask to `state`
+; * cl: idx
+; * dl: state (bool)
+.update_mod_mask:
+    mov ah, [.mod_mask]
+
+    ; mod_mask = (mod_mask & ~(1 << idx)) | (state << idx)
+    mov al, 1
+    shl al, cl
+    not al
+    and ah, al
+    shl dl, cl
+    or ah, dl
+    
+    mov [.mod_mask], ah
+    jmp .write_mod_mask
+
+.mod_mask db 0
+.is_capslock db 0
+.is_numlock db 0
+
+
+; set callback function to be called when a key event is received.
+; callback function will receive the key event in eax.
+; * eax: pointer to callback function
+kbd_set_callback:
+    mov [kbd_event_callback], eax
+    ret
+
+
+; convert a key event to a cp437 character
+; * eax: key event
+; * (out) al: character (0 means unprintable)
+kbd_keyevent_char:
+    movzx edx, al
+    shr eax, 8
+    cmp al, 0
+    jz .end
+
+    shr eax, 8
+    and al, 1 shl KBD_MOD_SHIFT
+    jnz .set_shifted_map
+
+    mov ecx, unshifted_keycode_map
+    jmp .index_map
+
+.set_shifted_map:
+    mov ecx, shifted_keycode_map
+
+.index_map:
+    movzx eax, dl
+    mov al, [ecx + edx]
+
+.end:
+    ret
+
+
 ; handle a keycode
 ; * al: keycode
 ; * dl: is pressed (0 = released)
-keyboard_handle_key:
+kbd_handle_key:
     cmp al, K_RTSH
     je .toggle_rshift
     cmp al, K_LFSH
@@ -147,6 +302,7 @@ keyboard_handle_key:
 .is_lshift db 0
 
 
+kbd_event_callback dd 0
 
 ; PS/2 scancode set 1 -> OS keycodes
 standard_scancode_map:
@@ -226,6 +382,16 @@ shifted_keycode_map:
     db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; d_
     db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; e_
     db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ; f_
+
+; keyboard modifier mask names
+KBD_MOD_SHIFT    = 0
+KBD_MOD_CTRL     = 1
+KBD_MOD_CAPSLOCK = 2
+KBD_MOD_ALT      = 3
+KBD_MOD_NUMLOCK  = 4
+KBD_MOD_META     = 5
+KBD_MOD_ALTGR    = 6
+KBD_MOD_UNUSED   = 7
 
 ; keycode names
 K_ESC  = 0x00 ; escape
