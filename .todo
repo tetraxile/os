@@ -4,7 +4,7 @@
     - [ ] TSS? LDT? what else do i need
     - [ ] provide both x86 and x86-64 versions? might need to wait until higher level language
 
-- [ ] implement filesystem
+- [ ] implement filesystem (LEAN is nice but i want to make my own)
     - [ ] disk driver
     - [ ] fs syscalls
 
@@ -16,7 +16,7 @@
 
 - [ ] add a shell
 
-- [ ] change video mode from text to pixel graphics
+- [ ] change video mode from text to pixel graphics (https://rubendv.be/posts/fwidth)
 
 - [ ] usb driver?
 
