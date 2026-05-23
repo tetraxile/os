@@ -1,0 +1,264 @@
+# Dateilayout:
+#   8048054-8048246: Code
+#   8048300-8048340: fstat-Puffer
+#   8048300+: Ausgabepuffer
+#   8048300+: Inhalt der Eingabedatei
+
+# Stacklayout:
+#   00 | 04 | in_dd
+#   04 | 04 | out_dd
+#   08 | 04 | in_path
+#   0c | 04 | out_path
+#   10 | 04 | in_size
+#   14 | 04 | out_size
+#   18 | 01 | is_ignoring
+#   19 | 01 | nibble_idx
+#   1a | 01 | nibbles
+
+
+# =================== ELF-HEADER ===================
+
+7f 45 4c 46  # 0000 | magische Zahl: \x7fELF
+01           # 0004 | Datei-Klasse: 32-Bit = 1
+   01        # 0005 | Datenkodierung: Little-Endian = 1
+      01     # 0006 | Datei-Version: aktuell = 1
+         00  # 0007 | OS-/ABI-Identifizierung: System-V = 0
+00           # 0008 | ABI-Version = 0 auf Linux
+   00 00 00  # 0009 | 
+00 00 00 00  # 000c | 
+02 00        # 0010 | ELF-Typ: ausführbare Datei = 2
+      03 00  # 0012 | Prozessor-Typ: 386 = 3
+01 00 00 00  # 0014 | ELF-Version: aktuell = 1
+54 80 04 08  # 0018 | Entry Point: Ladeadresse (x86) = 0x8048000
+34 00 00 00  # 001c | Programm-Header-Offset: direkt nach dem ELF-Header = 0x34
+00 00 00 00  # 0020 | Section-Header-Offset: kein Section-Header = 0
+00 00 00 00  # 0024 | prozessorspezifische Flags
+34 00        # 0028 | Größe des ELF-Headers = 0x34
+      20 00  # 002a | Größe eines Programm-Header-Eintrags = 0x20
+01 00        # 002c | Anzahl der Programm-Headers = 1
+      28 00  # 002e | Größe eines Section-Header-Eintrags = 0x28
+00 00        # 0030 | Anzahl der Section-Headers = 0
+      00 00  # 0032 | Index der Section-Header-Stringtabelle = 0
+
+
+# =================== PROGRAM-HEADER ===================
+
+01 00 00 00  # 0034 | Segment-Typ: PT_LOAD = 1
+00 00 00 00  # 0038 | Segment-Offset = 0
+00 80 04 08  # 003c | virtuelle Adresse des Segments = Ladeadresse
+00 00 00 00  # 0040 | physische Adresses des Segments (irrelevant auf Linux) = 0
+46 02 00 00  # 0044 | Größe des Segments in der Datei
+00 00 10 00  # 0048 | Größe des Segments im Speicher (1MB)
+07 00 00 00  # 004c | Flags: 1=X, 2=W, 4=R
+00 10 00 00  # 0050 | Alignment: 0x1000
+
+
+# =================== CODE ===================
+
+                  # Präambel
+89 e5             # 0054 | mov ebp, esp               - anfängliches Stack-Pointer speichern [11 100 101 -> e5]
+fc                # 0056 | cld                        - Richtung-Flag löschen (+)
+bc 00 83 04 08    # 0057 | mov esp, 0x08048300        - Puffer-Pointer setzen
+c7 45 18          # 005c | mov byte [ebp+0x18],       - Verschiebungsbetrag und Ignorieren-Flag initialisieren 
+      00 08 00 00 # 005f |               0x00080000   -   [01 000 101 -> 45]
+                  # 
+83 7d 00 03       # 0063 | cmp dword [ebp], 3         - wenn argc != 3 [01 111 101 -> 7d]
+0f 85 07 01 00 00 # 0067 | jne args_error             - dann goto args_error
+                  # 
+8b 5d 08          # 006d | mov ebx, [ebp+8]           - Zeiger auf Pfadname [01 011 101 -> 5d]
+31 c9             # 0070 | xor ecx, ecx               - Schalter: read-only (0) [11 001 001 -> c9]
+31 d2             # 0072 | xor edx, edx               - Modus (keiner bei read-only) [11 010 010 -> d2]
+b8 05 00 00 00    # 0074 | mov eax, 5                 - open Systemaufruf
+cd 80             # 0079 | int 0x80                   - Systemaufruf
+                  # 
+85 c0             # 007b | test eax, eax              - wenn Rückgabewert < 0 [11 000 000 -> c0]
+0f 88 d9 00 00 00 # 007d | jl file_error              - dann goto file_error
+                  # 
+89 45 00          # 0083 | mov [ebp+0], eax           - Eingabedatei-Handle speichern [01 000 101 -> 45]
+                  # 
+89 c3             # 0086 | mov ebx, eax               - dd = Eingabedatei [11 000 011 -> c3]
+89 e1             # 0088 | mov ecx, esp               - Zeiger auf Statuspuffer [11 100 001 -> e1]
+b8 6c 00 00 00    # 008a | mov eax, 0x6c              - fstat Systemaufruf
+cd 80             # 008f | int 0x80                   - Systemaufruf
+                  # 
+8b 44 24 14       # 0091 | mov eax, [esp+0x14]        - Dateigröße holen [01 000 100]
+89 45 10          # 0095 | mov [ebp+0x10], eax        - Dateigröße speichern [01 000 101 -> 45]
+                  # 
+8b 5d 00          # 0098 | mov ebx, [ebp+0]           - dd = Eingabedatei [01 011 101 -> 5d]
+89 e1             # 009b | mov ecx, esp               - Zeiger auf Eingabepuffer [11 100 001 -> e1]
+8b 55 10          # 009d | mov edx, [ebp+0x10]        - Größe der Eingabedatei [01 010 101 -> 55] 
+b8 03 00 00 00    # 00a0 | mov eax, 3                 - read Systemaufruf
+cd 80             # 00a5 | int 0x80                   - Systemaufruf
+                  # 
+85 c0             # 00a7 | test eax, eax              - wenn Rückgabewert < 0 [11 000 000 -> c0]
+0f 88 b9 00 00 00 # 00a9 | js read_error              - dann goto read_error
+                  # 
+89 e6             # 00af | mov esi, esp               - esi = Anfang der Eingabedatei [11 100 110 -> e6]
+89 e7             # 00b1 | mov edi, esp               - edi = Anfang der Ausgabedatei [11 100 111 -> e7]
+89 f2             # 00b3 | mov edx, esi               -   [11 110 010 -> f2]
+03 55 10          # 00b5 | add edx, [ebp+0x10]        - edx = Ende der Eingabedatei [01 010 101 -> 55]
+                  # 
+                  # 00b8 | .loop:
+39 d6             # 00b8 | cmp esi, edx               - wenn in_cursor >= Ende der Eingabedatei [11 010 110 -> d6]
+7d 58             # 00ba | jge .end                   - dann verlasse Loop
+                  # 
+8a 06             # 00bc | mov al, [esi]              - Zeichen lesen [00 000 110 -> 06]
+46                # 00be | inc esi                    - Cursor erhöhen
+                  # 
+3c 0a             # 00bf | cmp al, 0xa                - wenn Zeichen == '\n'
+74 4b             # 00c1 | je .newline                - dann Ignorieren beenden und weiterlesen
+                  # 
+80 7d 18 01       # 00c3 | cmp byte [ebp+0x18], 1     - wenn in einem Kommentar [01 111 101 -> 7d]
+74 ef             # 00c7 | je .loop                   - dann weiterlesen
+                  # 
+3c 23             # 00c9 | cmp al, 0x23               - wenn Zeichen == ';'
+74 3b             # 00cb | je .comment                - dann bis Newline ignorieren
+                  # 
+3c 30             # 00cd | cmp al, 0x30               - wenn Zeichen < '0'
+7c e7             # 00cf | jl .loop                   - dann weiterlesen
+                  # 
+3c 39             # 00d1 | cmp al, 0x39               - wenn Zeichen <= '9'
+7e 0c             # 00d3 | jle .digit                 - dann als Nummer parsen
+                  # 
+3c 61             # 00d5 | cmp al, 0x61               - wenn Zeichen < 'a'
+7c df             # 00d7 | jl .loop                   - dann weiterlesen
+                  # 
+3c 66             # 00d9 | cmp al, 0x66               - wenn Zeichen > 'f'
+7f db             # 00db | jnle .loop                 - dann weiterlesen, sonst als Buchstabe parsen
+                  # 
+                  # 00dd | .letter:
+2c 57             # 00dd | sub al, 0x57               - Zeichen als Buchstabe parsen
+eb 02             # 00df | jmp .add_nibble            - Nibble anhängen
+                  # 
+                  # 00e1 | .digit:
+2c 30             # 00e1 | sub al, 0x30               - Zeichen als Nummer parsen
+                  # 
+                  # 00e3 | .add_nibble:
+8a 4d 19          # 00e3 | mov cl, byte [ebp+0x19]    - Verschiebungsbetrag lesen [01 001 101 -> 4d]
+80 e9 04          # 00e6 | sub cl, 4                  -   [11 101 001 -> e9]
+d2 e0             # 00e9 | shl al, cl                 - AL in Nibble schieben [11 100 000 -> e0]
+08 45 1a          # 00eb | or byte [ebp+0x1a], al     - AL zum Arbeitsbyte addieren [01 000 101 -> 45]
+80 6d 19 04       # 00ee | sub byte [ebp+0x19], 4     - Nibble-Index verringern [01 101 101 -> 6d]
+80 7d 19 00       # 00f2 | cmp byte [ebp+0x19], 0     - wenn Nibble-Index == 0 [01 111 101 -> 7d]
+7f c0             # 00f6 | jge .loop                  - dann weiterlesen, sonst Byte kopieren
+                  # 
+                  # 00f8 | .copy_byte:
+8a 45 1a          # 00f8 | mov al, byte [ebp+0x1a]    - Arbeitsbyte lesen [01 000 101 -> 45]
+88 07             # 00fb | mov byte [edi], al         - Byte zum Ausgabepuffer schreiben [00 000 111 -> 07]
+47                # 00fd | inc edi                    - out_cursor erhöhen
+c6 45 1a 00       # 00fe | mov byte [ebp+0x1a], 0     - Arbeitsbyte löschen [01 000 101 -> 45]
+c6 45 19 08       # 0102 | mov byte [ebp+0x19], 8     - Verschiebungsbetrag zurücksetzen [01 000 101 -> 45]
+eb b0             # 0106 | jmp .loop                  - weiterlesen
+                  # 
+                  # 0108 | .comment:
+c6 45 18 01       # 0108 | mov byte [ebp+0x18], 1     - Ignorieren anfangen [01 000 101 -> 45]
+eb aa             # 010c | jmp .loop                  - weiterlesen
+                  # 
+                  # 010e | .newline:
+c6 45 18 00       # 010e | mov byte [ebp+0x18], 0     - Ignorieren beenden [01 000 101 -> 45]
+eb a4             # 0112 | jmp .loop                  - weiterlesen
+                  # 
+                  # 0114 | .end:
+29 e7             # 0114 | sub edi, esp               - Ausgabengröße berechnen [11 100 111 -> e7]
+89 7d 14          # 0116 | mov [ebp+0x14], edi        - Ausgabengröße speichern [01 111 101 -> 7d]
+                  # 
+8b 5d 00          # 0119 | mov ebx, [ebp+0]           - dd = Eingabedatei [01 011 101 -> 5d]
+b8 06 00 00 00    # 011c | mov eax, 6                 - close Systemaufruf
+cd 80             # 0121 | int 0x80                   - Systemaufruf
+                  # 
+8b 5d 0c          # 0123 | mov ebx, [ebp+0xc]         - Zeiger auf Pfadname [01 011 101 -> 5d]
+b9 41 02 00 00    # 0126 | mov ecx, 0x241             - Schalter: O_CREAT|O_WRONLY|O_TRUNC
+ba ed 01 00 00    # 012b | mov edx, 0o755             - Modus: rwxr-xr-x 
+b8 05 00 00 00    # 0130 | mov eax, 5                 - open Systemaufruf
+cd 80             # 0135 | int 0x80                   - Systemaufruf
+                  # 
+85 c0             # 0137 | test eax, eax              - wenn Rückgabewert < 0 [11 000 000 -> c0]
+78 45             # 0139 | js file_create_error       - dann goto file_create_error
+                  # 
+89 45 04          # 013b | mov [ebp+4], eax           - Ausgabedatei-Handle speichern [01 000 101 -> 45]
+                  # 
+89 c3             # 013e | mov ebx, eax               - dd = Ausgabedatei [11 000 011 -> c3]
+89 e1             # 0140 | mov ecx, esp               - Ausgabedaten [11 100 001 -> e1]
+8b 55 14          # 0142 | mov edx, [ebp+0x14]        - Ausgabengröße [01 010 101 -> 55]
+b8 04 00 00 00    # 0145 | mov eax, 4                 - write Systemaufruf
+cd 80             # 014a | int 0x80                   - Systemaufruf
+                  # 
+85 c0             # 014c | test eax, eax              - wenn Rückgabewert < 0 [11 000 000 -> c0]
+78 3c             # 014e | js write_error             - dann goto write_error
+                  # 
+8b 5d 04          # 0150 | mov ebx, [ebp+4]           - dd = Ausgabedatei [01 011 101 -> 5d]
+b8 06 00 00 00    # 0153 | mov eax, 6                 - close Systemaufruf
+cd 80             # 0158 | int 0x80                   - Systemaufruf
+                  # 
+eb 4a             # 015a | jmp success                - erfolgreich beenden
+                  # 
+                  # 015c | file_error:
+b9 ad 81 04 08    # 015c | mov ecx, file_error_msg        - String-Pointer
+ba 24 00 00 00    # 0161 | mov edx, 0x24                  - Stringlänge
+eb 2e             # 0166 | jmp print_error                - Fehler ausgeben
+                  # 
+                  # 0168 | read_error:
+b9 d1 81 04 08    # 0168 | mov ecx, read_error_msg        - String-Pointer
+ba 12 00 00 00    # 016d | mov edx, 0x12                  - Stringlänge
+eb 22             # 0172 | jmp print_error                - Fehler ausgeben
+                  # 
+                  # 0174 | args_error:
+b9 e3 81 04 08    # 0174 | mov ecx, args_error_msg        - String-Pointer
+ba 2a 00 00 00    # 0179 | mov edx, 0x2a                  - Stringlänge
+eb 16             # 017e | jmp print_error                - Fehler ausgeben
+                  # 
+                  # 0180 | file_create_error:
+b9 0d 82 04 08    # 0180 | mov ecx, file_create_error_msg - String-Pointer
+ba 23 00 00 00    # 0185 | mov edx, 0x23                  - Stringlänge
+eb 0a             # 018a | jmp print_error                - Fehler ausgeben
+                  # 
+                  # 018c | write_error:
+b9 30 82 04 08    # 018c | mov ecx, write_error_msg       - String-Pointer
+ba 16 00 00 00    # 0191 | mov edx, 0x16                  - Stringlänge
+                  # 0196 | jmp print_error                - Fehler ausgeben
+                  # 
+                  # 0196 | print_error:
+31 db 43 43       # 0196 | mov ebx, 2          - dd = stderr (2) (xor ebx,ebx; inc ebx; inc ebx)
+b8 04 00 00 00    # 019a | mov eax, 4          - write Systemaufruf
+cd 80             # 019f | int 0x80            - Systemaufruf
+                  # 01a1 | jmp failure         - mit Fehlercode beenden
+                  # 
+                  # 01a1 | failure:
+31 db 43          # 01a1 | mov ebx, 1          - Fehlercode (xor ebx,ebx; inc ebx)
+eb 02             # 01a4 | jmp exit            - goto exit
+                  # 
+                  # 01a6 | success:
+31 db             # 01a6 | xor ebx, ebx        - Erfolgscode [11 011 011 -> db]
+                  # 
+                  # 01a8 | exit:
+31 c0 40          # 01a8 | mov eax, 1          - exit Systemaufruf (xor eax, eax; inc eax)
+cd 80             # 01ab | int 0x80            - Systemaufruf
+                  # 01ad
+
+                        # 01ad | strings:
+44 61 74 65 69 20 6b 6f # 01ad | file_error_msg: db "Datei konnte nicht geöffnet werden\n"
+6e 6e 74 65 20 6e 69 63 # 01b5 |   (Länge = 0x24)
+68 74 20 67 65 c3 b6 66 # 01bd | 
+66 6e 65 74 20 77 65 72 # 01c5 | 
+64 65 6e 0a             # 01cd | 
+                        # 
+46 65 68 6c 65 72 20 62 # 01d1 | read_error_msg: db "Fehler beim Lesen\n"
+65 69 6d 20 4c 65 73 65 # 01d9 |   (Länge = 0x12)
+6e 0a                   # 01e1 | 
+                        # 
+65 72 77 61 72 74 65 74 # 01e3 | args_error_msg: db "erwartet werden 2 Kommandozeilenargumente\n"
+20 77 65 72 64 65 6e 20 # 01eb |   (Länge = 0x2a)
+32 20 4b 6f 6d 6d 61 6e # 01f3 | 
+64 6f 7a 65 69 6c 65 6e # 01fb | 
+61 72 67 75 6d 65 6e 74 # 0203 | 
+65 0a                   # 020b | 
+                        # 
+44 61 74 65 69 20 6b 6f # 020d | file_create_error_msg: db "Datei konnte nicht erstellt werden\n"
+6e 6e 74 65 20 6e 69 63 # 0215 |   (Länge = 0x23)
+68 74 20 65 72 73 74 65 # 021d | 
+6c 6c 74 20 77 65 72 64 # 0225 | 
+65 6e 0a                # 022d | 
+                        # 
+46 65 68 6c 65 72 20 62 # 0230 | write_error_msg: db "Fehler beim Schreiben\n" 
+65 69 6d 20 53 63 68 72 # 0238 |   (Länge = 0x16)
+65 69 62 65 6e 0a       # 0240 | 

@@ -1,0 +1,1018 @@
+# INSTRUCTION STRUCTURE
+# bytes   | name
+# --------+------------
+# 0-4     | prefix
+# 1-3     | opcode
+# 0-1     | ModR/M byte
+# 0-1     | SIB byte
+# 0/1/2/4 | displacement
+# 0/1/2/4 | immediate data
+
+# OPCODE BIT FIELDS
+# 
+# for some instructions, the lowest two bits of the primary opcode
+# are meaningful:
+# 
+# 7 6 5 4 3 2|1|0
+# opcode bits|D|W
+# 
+# direction (D):
+#     0 = ModR/M <- reg
+#     1 = reg <- ModR/M
+# 
+# operand size (W):
+#     0 = 8-bit
+#     1 = 32-bit (16-bit with 0x66 prefix)
+
+# ModR/M BYTE - mod(2):reg(3):r/m(3)
+# 
+# mod = addressing mode:
+#     00 - [r/m] or 101 (disp32)
+#     01 - [r/m + disp8]
+#     10 - [r/m + disp32]
+#     11 - r/m
+# reg = register OR opcode modifier (for certain opcodes)
+# r/m = r/m field
+# 
+#     |                 MOD
+# r/m |  00   |    01    |     10    |      11
+#-----+-------+----------+-----------+---------------
+# 000 | [eax] | [eax+d8] | [eax+d32] | al / ax / eax
+# 001 | [ecx] | [ecx+d8] | [ecx+d32] | cl / cx / ecx
+# 010 | [edx] | [edx+d8] | [edx+d32] | dl / dx / edx
+# 011 | [ebx] | [ebx+d8] | [ebx+d32] | bl / bx / ebx
+# 100 | [SIB]*| [SIB+d8]*| [SIB+d32]*| ah / sp / esp
+# 101 | [d32]*| [ebp+d8] | [ebp+d32] | ch / bp / ebp
+# 110 | [esi] | [esi+d8] | [esi+d32] | dh / si / esi
+# 111 | [edi] | [edi+d8] | [edi+d32] | bh / di / edi
+#   (exceptions marked with *)
+# 
+# example:
+#     mov ebx, eax     # 89 c3    - [c3 = 11 000 011]
+#     inc byte [eax]   # fe 00    - [00 = 00 000 000]
+#     dec byte [eax]   # fe 08    - [08 = 00 001 000]
+#     mov ebx, ebp     # 89 eb    - [eb = 11 101 011]
+#     mov [eax]+4, ebx # 89 58 04 - [58 = 01 011 000]
+
+# SIB BYTE - scale(2):index(3):base(3)
+# 
+# value = scale * index + base
+# 
+# bits | scale | index | base
+#------+-------+-------+------
+# 000  |   1   |  eax  | eax
+# 001  |   2   |  ecx  | ecx
+# 010  |   4   |  edx  | edx
+# 011  |   8   |  ebx  | ebx
+# 100  |   -   |   0   | esp
+# 101  |   -   |  ebp  |  ?
+# 110  |   -   |  esi  | esi
+# 111  |   -   |  edi  | edi
+
+# REGISTER INDICES
+# 0 - 000 - eax / ax / al
+# 1 - 001 - ecx / cx / cl
+# 2 - 010 - edx / dx / dl
+# 3 - 011 - ebx / bx / bl
+# 4 - 100 - esp / sp / ah
+# 5 - 101 - ebp / bp / ch
+# 6 - 110 - esi / si / dh
+# 7 - 111 - edi / di / bh
+
+# OPCODES
+# 
+# info:
+#   prefixes in uppercase
+#   instruction aliases in (parentheses)
+#   other necessary info in [brackets]
+# 
+# opcode syntax:
+#   XX/# = ModR/M byte with operation number #
+#   XX/r = opcode is XX + register index
+#   rm = ModR/M byte
+#   ?? = necessary byte (e.g. for immediates)
+# 
+# assembly syntax:
+#   r8, r16, r32 = register
+#   r/m8, r/m16, r/m32 = register or memory address
+#   imm8, imm16, imm32 = immediate value
+#   rel8, rel32 = address relative to the byte following instruction
+#   m16:16, m16:32 = far pointer
+#   m = 
+# 
+# 
+#    00   rm              add r/m8, r8
+#    01   rm              add r/m32, r32
+# 66 01   rm              add r/m16, r16
+#    02   rm              add r8, r/m8
+#    03   rm              add r32, r/m32
+# 66 03   rm              add r16, r/m16
+#    04   ??              add al, imm8
+#    05   ?? ?? ?? ??     add eax, imm32
+# 66 05   ?? ??           add ax, imm16
+#    08   rm              or  r/m8, r8
+#    09   rm              or  r/m32, r32
+# 66 09   rm              or  r/m16, r16
+#    0a   rm              or  r8, r/m8
+#    0b   rm              or  r32, r/m32
+# 66 0b   rm              or  r16, r/m16
+#    0c   ??              or  al, imm8
+#    0d   ?? ?? ?? ??     or  eax, imm32
+# 66 0d   ?? ??           or  ax, imm16
+# 0f                      TWO-BYTE INSTRUCTION
+#    10   rm              adc r/m8, r8
+#    11   rm              adc r/m32, r32
+# 66 11   rm              adc r/m16, r16
+#    12   rm              adc r8, r/m8
+#    13   rm              adc r32, r/m32
+# 66 13   rm              adc r16, r/m16
+#    14   ??              adc al, imm8
+#    15   ?? ?? ?? ??     adc eax, imm32
+# 66 15   ?? ??           adc ax, imm16
+#    18   rm              sbb r/m8, r8
+#    19   rm              sbb r/m32, r32
+# 66 19   rm              sbb r/m16, r16
+#    1a   rm              sbb r8, r/m8
+#    1b   rm              sbb r32, r/m32
+# 66 1b   rm              sbb r16, r/m16
+#    1c   ??              sbb al, imm8
+#    1d   ?? ?? ?? ??     sbb eax, imm32
+# 66 1d   ?? ??           sbb ax, imm16
+#    20   rm              and r/m8, r8
+#    21   rm              and r/m32, r32
+# 66 21   rm              and r/m16, r16
+#    22   rm              and r8, r/m8
+#    23   rm              and r32, r/m32
+# 66 23   rm              and r16, r/m16
+#    24   ??              and al, imm8
+#    25   ?? ?? ?? ??     and eax, imm32
+# 66 25   ?? ??           and ax, imm16
+#    28   rm              sub r/m8, r8
+#    29   rm              sub r/m32, r32
+# 66 29   rm              sub r/m16, r16
+#    2a   rm              sub r8, r/m8
+#    2b   rm              sub r32, r/m32
+# 66 2b   rm              sub r16, r/m16
+#    2c   ??              sub al, imm8
+#    2d   ?? ?? ?? ??     sub eax, imm32
+# 66 2d   ?? ??           sub ax, imm16
+#    30   rm              xor r/m8, r8
+#    31   rm              xor r/m32, r32
+# 66 31   rm              xor r/m16, r16
+#    32   rm              xor r8, r/m8
+#    33   rm              xor r32, r/m32
+# 66 33   rm              xor r16, r/m16
+#    34   ??              xor al, imm8
+#    35   ?? ?? ?? ??     xor eax, imm32
+# 66 35   ?? ??           xor ax, imm16
+#    38   rm              cmp r/m8, r8
+#    39   rm              cmp r/m32, r32
+# 66 39   rm              cmp r/m16, r16
+#    3a   rm              cmp r8, r/m8
+#    3b   rm              cmp r32, r/m32
+# 66 3b   rm              cmp r16, r/m16
+#    3c   ??              cmp al, imm8
+#    3d   ?? ?? ?? ??     cmp eax, imm32
+# 66 3d   ?? ??           cmp ax, imm16
+#    40+r                 inc r32
+# 66 40+r                 inc r16
+#    48+r                 dec r32
+# 66 48+r                 dec r16
+#    50+r                 push r32
+# 66 50+r                 push r16
+#    58+r                 pop r32
+# 66 58+r                 pop r16
+#    60                   pushad
+# 66 60                   pusha
+#    61                   popad
+# 66 61                   popa
+#    68   ?? ?? ?? ??     push imm32
+# 66 68   ?? ??           push imm16
+#    69   rm ?? ?? ?? ??  imul r32, r/m32, imm32
+# 66 69   rm ?? ??        imul r16, r/m16, imm16
+#    6a   ??              push imm8
+#    6b   rm ??           imul r8, r/m8, imm8
+#    6c                   insb
+#    6d                   insd
+# 66 6d                   insw
+#    6e                   outsb
+#    6f                   outsd
+# 66 6f                   outsw
+#    70   ??              jo rel8
+#    71   ??              jno rel8
+#    72   ??              jb rel8 (jnae, jc)
+#    73   ??              jnb rel8 (jae, jnc)
+#    74   ??              jz rel8 (je)
+#    75   ??              jnz rel8 (jne)
+#    76   ??              jbe rel8 (jna)
+#    77   ??              jnbe rel8 (ja)
+#    78   ??              js rel8
+#    79   ??              jns rel8
+#    7a   ??              jp rel8 (jpe)
+#    7b   ??              jnp rel8 (jpo)
+#    7c   ??              jl rel8 (jnge)
+#    7d   ??              jge rel8 (jnl)
+#    7e   ??              jle rel8 (jng)
+#    7f   ??              jg rel8 (jnle)
+#    80/0 rm ??           add r/m8, imm8
+#    80/1 rm ??           or  r/m8, imm8
+#    80/2 rm ??           adc r/m8, imm8
+#    80/3 rm ??           sbb r/m8, imm8
+#    80/4 rm ??           and r/m8, imm8
+#    80/5 rm ??           sub r/m8, imm8
+#    80/6 rm ??           xor r/m8, imm8
+#    80/7 rm ??           cmp r/m8, imm8
+#    81/0 rm ?? ?? ?? ??  add r/m32, imm32
+#    81/1 rm ?? ?? ?? ??  or  r/m32, imm32
+#    81/2 rm ?? ?? ?? ??  adc r/m32, imm32
+#    81/3 rm ?? ?? ?? ??  sbb r/m32, imm32
+#    81/4 rm ?? ?? ?? ??  and r/m32, imm32
+#    81/5 rm ?? ?? ?? ??  sub r/m32, imm32
+#    81/6 rm ?? ?? ?? ??  xor r/m32, imm32
+#    81/7 rm ?? ?? ?? ??  cmp r/m32, imm32
+# 66 81/0 rm ?? ??        add r/m16, imm16
+# 66 81/1 rm ?? ??        or  r/m16, imm16
+# 66 81/2 rm ?? ??        adc r/m16, imm16
+# 66 81/3 rm ?? ??        sbb r/m16, imm16
+# 66 81/4 rm ?? ??        and r/m16, imm16
+# 66 81/5 rm ?? ??        sub r/m16, imm16
+# 66 81/6 rm ?? ??        xor r/m16, imm16
+# 66 81/7 rm ?? ??        cmp r/m16, imm16
+#    82   rm ??           alias for 80
+#    83/0 rm ??           add r/m32, imm8
+#    83/1 rm ??           or  r/m32, imm8
+#    83/2 rm ??           adc r/m32, imm8
+#    83/3 rm ??           sbb r/m32, imm8
+#    83/4 rm ??           and r/m32, imm8
+#    83/5 rm ??           sub r/m32, imm8
+#    83/6 rm ??           xor r/m32, imm8
+#    83/7 rm ??           cmp r/m32, imm8
+# 66 83/0 rm ??           add r/m16, imm8
+# 66 83/1 rm ??           or  r/m16, imm8
+# 66 83/2 rm ??           adc r/m16, imm8
+# 66 83/3 rm ??           sbb r/m16, imm8
+# 66 83/4 rm ??           and r/m16, imm8
+# 66 83/5 rm ??           sub r/m16, imm8
+# 66 83/6 rm ??           xor r/m16, imm8
+# 66 83/7 rm ??           cmp r/m16, imm8
+#    84   rm              test r/m8, r8
+#    85   rm              test r/m32, r32
+# 66 85   rm              test r/m16, r16
+#    86   rm              xchg r8, r/m8
+#    87   rm              xchg r32, r/m32
+# 66 87   rm              xchg r16, r/m16
+#    88   rm              mov r/m8, r8
+#    89   rm              mov r/m32, r32
+# 66 89   rm              mov r/m16, r16
+#    8a   rm              mov r8, r/m8
+#    8b   rm              mov r32, r/m32
+# 66 8b   rm              mov r16, r/m16
+#    8d   rm              lea r32, m
+# 66 8d   rm              lea r16, m
+#    90+r                 xchg r32, eax
+# 66 90+r                 xchg r16, ax
+#    90                   nop
+#    a0   ?? ?? ?? ??     mov al, moffs8
+#    a1   ?? ?? ?? ??     mov eax, moffs32
+# 66 a1   ?? ?? ?? ??     mov ax, moffs16
+#    a2   ?? ?? ?? ??     mov moffs8, al
+#    a3   ?? ?? ?? ??     mov moffs32, eax
+# 66 a3   ?? ?? ?? ??     mov moffs16, eax
+#    a4                   movsb [di, si]
+#    a5                   movsd [di, si]
+# 66 a5                   movsw [di, si]
+#    a6                   cmpsb [di, si]
+#    a7                   cmpsd [di, si]
+# 66 a7                   cmpsw [di, si]
+#    a8   ??              test al, imm8
+#    a9   ?? ?? ?? ??     test eax, imm32
+# 66 a9   ?? ??           test ax, imm16
+#    aa                   stosb [di, al]
+#    ab                   stosd [di, eax]
+# 66 ab                   stosw [di, ax]
+#    ac                   lodsb [al, si]
+#    ad                   lodsd [ax, si]
+# 66 ad                   lodsw [eax, si]
+#    ae                   scasb [di, al]
+#    af                   scasd [di, eax]
+# 66 af                   scasw [di, ax]
+#    b0+r ??              mov r8, imm8
+#    b8+r ?? ?? ?? ??     mov r32, imm32
+# 66 b8+r ?? ??           mov r16, imm16
+#    c0/0 rm ??           rol r/m8, imm8
+#    c0/1 rm ??           ror r/m8, imm8
+#    c0/2 rm ??           rcl r/m8, imm8
+#    c0/3 rm ??           rcr r/m8, imm8
+#    c0/4 rm ??           shl r/m8, imm8 (sal)
+#    c0/5 rm ??           shr r/m8, imm8
+#    c0/6 rm ??           alias for c0/4
+#    c0/7 rm ??           sar r/m8, imm8
+#    c1/0 rm ??           rol r/m32, imm8
+#    c1/1 rm ??           ror r/m32, imm8
+#    c1/2 rm ??           rcl r/m32, imm8
+#    c1/3 rm ??           rcr r/m32, imm8
+#    c1/4 rm ??           shl r/m32, imm8 (sal)
+#    c1/5 rm ??           shr r/m32, imm8
+#    c1/6 rm ??           alias for c1/4
+#    c1/7 rm ??           sar r/m32, imm8
+# 66 c1/0 rm ??           rol r/m16, imm8
+# 66 c1/1 rm ??           ror r/m16, imm8
+# 66 c1/2 rm ??           rcl r/m16, imm8
+# 66 c1/3 rm ??           rcr r/m16, imm8
+# 66 c1/4 rm ??           shl r/m16, imm8 (sal)
+# 66 c1/5 rm ??           shr r/m16, imm8
+# 66 c1/6 rm ??           alias for c1/4
+# 66 c1/7 rm ??           sar r/m16, imm8
+#    c6/0 rm ??           mov r/m8, imm8
+#    c7/0 rm ?? ?? ?? ??  mov r/m32, imm32
+# 66 c7/0 rm ?? ??        mov r/m16, imm16
+#    cc                   int3
+#    cd   ??              int imm8
+#    ce                   into
+#    cf                   iretd
+# 66 cf                   iret
+#    d0/0 rm              rol r/m8, 1
+#    d0/1 rm              ror r/m8, 1
+#    d0/2 rm              rcl r/m8, 1
+#    d0/3 rm              rcr r/m8, 1
+#    d0/4 rm              shl r/m8, 1 (sal)
+#    d0/5 rm              shr r/m8, 1
+#    d0/6 rm              alias for d0/4
+#    d0/7 rm              sar r/m8, 1
+#    d1/0 rm              rol r/m32, 1
+#    d1/1 rm              ror r/m32, 1
+#    d1/2 rm              rcl r/m32, 1
+#    d1/3 rm              rcr r/m32, 1
+#    d1/4 rm              shl r/m32, 1 (sal)
+#    d1/5 rm              shr r/m32, 1
+#    d1/6 rm              alias for d1/4
+#    d1/7 rm              sar r/m32, 1
+# 66 d1/0 rm              rol r/m16, 1
+# 66 d1/1 rm              ror r/m16, 1
+# 66 d1/2 rm              rcl r/m16, 1
+# 66 d1/3 rm              rcr r/m16, 1
+# 66 d1/4 rm              shl r/m16, 1 (sal)
+# 66 d1/5 rm              shr r/m16, 1
+# 66 d1/6 rm              alias for d1/4
+# 66 d1/7 rm              sar r/m16, 1
+#    d2/0 rm              rol r/m8, cl
+#    d2/1 rm              ror r/m8, cl
+#    d2/2 rm              rcl r/m8, cl
+#    d2/3 rm              rcr r/m8, cl
+#    d2/4 rm              shl r/m8, cl (sal)
+#    d2/5 rm              shr r/m8, cl
+#    d2/6 rm              alias for d2/4
+#    d2/7 rm              sar r/m8, cl
+#    d3/0 rm              rol r/m32, cl
+#    d3/1 rm              ror r/m32, cl
+#    d3/2 rm              rcl r/m32, cl
+#    d3/3 rm              rcr r/m32, cl
+#    d3/4 rm              shl r/m32, cl (sal)
+#    d3/5 rm              shr r/m32, cl
+#    d3/6 rm              alias for d3/4
+#    d3/7 rm              sar r/m32, cl
+# 66 d3/0 rm              rol r/m16, cl
+# 66 d3/1 rm              ror r/m16, cl
+# 66 d3/2 rm              rcl r/m16, cl
+# 66 d3/3 rm              rcr r/m16, cl
+# 66 d3/4 rm              shl r/m16, cl (sal)
+# 66 d3/5 rm              shr r/m16, cl
+# 66 d3/6 rm              alias for d3/4
+# 66 d3/7 rm              sar r/m16, cl
+#    e0   ??              loopne ecx, rel8 (loopnz)
+# 66 e0   ??              loopne cx, rel8 (loopnz)
+#    e1   ??              loope ecx, rel8 (loopz)
+# 66 e1   ??              loope cx, rel8 (loopz)
+#    e2   ??              loop ecx, rel8
+# 66 e2   ??              loop cx, rel8
+#    e3   ??              jecxz rel8
+# 66 e3   ??              jcxz rel8
+#    e4   ??              in al, imm8
+#    e5   ?? ?? ?? ??     in eax, imm8
+# 66 e5   ?? ??           in ax, imm8
+#    e6   ??              out imm8, al
+#    e7   ?? ?? ?? ??     out imm8, eax
+# 66 e7   ?? ??           out imm8, ax
+#    e8   ?? ?? ?? ??     call rel32
+# 66 e8   ?? ??           call rel16
+#    e9   ?? ?? ?? ??     jmp rel32
+# 66 e9   ?? ??           jmp rel16
+#    ea                   jmpf ptr16:32
+# 66 ea                   jmpf ptr16:16
+#    eb   ??              jmp rel8
+#    ec                   in al, dx
+#    ed                   in eax, dx
+# 66 ed                   in ax, dx
+#    ee                   out dx, al
+#    ef                   out dx, eax
+# 66 ef                   out dx, ax
+# f0                      LOCK
+#    f1                   int1 (icebp)
+#    f2                   REPNE (REPNZ) [for cmps, scas]
+#                         REP           [for ins, outs, movs, lods, stos]
+#    f3                   REPE (REPZ)   [for cmps, scas]
+#                         REP           [for ins, outs, movs, lods, stos]
+#    f4                   hlt
+#    f5                   cmc
+#    f6/0                 test r/m8, imm8
+#    f6/1                 alias for f6/1
+#    f6/2                 not r/m8
+#    f6/3                 neg r/m8
+#    f6/4                 mul r/m8
+#    f6/5                 imul r/m8
+#    f6/6                 div r/m8
+#    f6/7                 idiv r/m8
+#    f7/0                 test r/m32, imm32
+#    f7/1                 alias for f7/1
+#    f7/2                 not r/m32
+#    f7/3                 neg r/m32
+#    f7/4                 mul r/m32
+#    f7/5                 imul r/m32
+#    f7/6                 div r/m32
+#    f7/7                 idiv r/m32
+# 66 f7/0                 test r/m16, imm16
+# 66 f7/1                 alias for f7/1
+# 66 f7/2                 not r/m16
+# 66 f7/3                 neg r/m16
+# 66 f7/4                 mul r/m16
+# 66 f7/5                 imul r/m16
+# 66 f7/6                 div r/m16
+# 66 f7/7                 idiv r/m16
+#    f8                   clc
+#    f9                   stc
+#    fa                   cli
+#    fb                   sti
+#    fc                   cld
+#    fd                   std
+#    fe/0 rm              inc r/m8
+#    fe/1 rm              dec r/m8
+#    ff/0 rm              inc r/m32
+#    ff/1 rm              dec r/m32
+#    ff/2 rm              call r/m32
+#    ff/3 rm              callf m16:32
+#    ff/4 rm              jmp r/m32
+#    ff/5 rm              jmpf m16:32
+#    ff/6 rm              push r/m32
+# 66 ff/0 rm              inc r/m16
+# 66 ff/1 rm              dec r/m16
+# 66 ff/2 rm              call r/m16
+# 66 ff/3 rm              callf m16:16
+# 66 ff/4 rm              jmp r/m16
+# 66 ff/5 rm              jmpf m16:16
+# 66 ff/6 rm              push r/m16
+# 
+#    0f 80   ??              jo rel32
+# 66 0f 80   ??              jo rel16
+#    0f 81   ??              jno rel32
+# 66 0f 81   ??              jno rel16
+#    0f 82   ??              jb rel32 (jnae, jc)
+# 66 0f 82   ??              jb rel16 (jnae, jc)
+#    0f 83   ??              jnb rel32 (jae, jnc)
+# 66 0f 83   ??              jnb rel16 (jae, jnc)
+#    0f 84   ??              jz rel32 (je)
+# 66 0f 84   ??              jz rel16 (je)
+#    0f 85   ??              jnz rel32 (jne)
+# 66 0f 85   ??              jnz rel16 (jne)
+#    0f 86   ??              jbe rel32 (jna)
+# 66 0f 86   ??              jbe rel16 (jna)
+#    0f 87   ??              jnbe rel32 (ja)
+# 66 0f 87   ??              jnbe rel16 (ja)
+#    0f 88   ??              js rel32
+# 66 0f 88   ??              js rel16
+#    0f 89   ??              jns rel32
+# 66 0f 89   ??              jns rel16
+#    0f 8a   ??              jp rel32 (jpe)
+# 66 0f 8a   ??              jp rel16 (jpe)
+#    0f 8b   ??              jnp rel32 (jpo)
+# 66 0f 8b   ??              jnp rel16 (jpo)
+#    0f 8c   ??              jl rel32 (jnge)
+# 66 0f 8c   ??              jl rel16 (jnge)
+#    0f 8d   ??              jge rel32 (jnl)
+# 66 0f 8d   ??              jge rel16 (jnl)
+#    0f 8e   ??              jle rel32 (jng)
+# 66 0f 8e   ??              jle rel16 (jng)
+#    0f 8f   ??              jg rel32 (jnle)
+# 66 0f 8f   ??              jg rel16 (jnle)
+#    0f b6   rm              movzx r32, r/m8
+# 66 0f b6   rm              movzx r16, r/m8
+#    0f b7   rm              movzx r32, r/m16
+# 66 0f b7   rm              movzx r16, r/m16
+
+# UNIX FILE DESCRIPTORS
+# 0 - stdin
+# 1 - stdout
+# 2 - stderr
+
+# ASCII
+# 
+#    | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | a | b | c | d | e | f 
+#----+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---
+# 0x |NUL SOH STX ETX EOT ENQ ACK BEL  BS  HT  LF  VT  FF  CR  SO  SI
+# 1x |DLE DC1 DC2 DC3 DC4 NAK SYN ETB CAN  EM SUB ESC  FS  GS  RS  US
+# 2x | SP  !   "   #   $   %   &   '   (   )   *   +   ,   -   .   /
+# 3x | 0   1   2   3   4   5   6   7   8   9   :   ;   <   =   >   ?
+# 4x | @   A   B   C   D   E   F   G   H   I   J   K   L   M   N   O
+# 5x | P   Q   R   S   T   U   V   W   X   Y   Z   [   \   ]   ^   _
+# 6x | `   a   b   c   d   e   f   g   h   i   j   k   l   m   n   o
+# 7x | p   q   r   s   t   u   v   w   x   y   z   {   |   }   ~  DEL
+#----+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---
+#    | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | a | b | c | d | e | f 
+
+# ELF ENTRY STACK LAYOUT
+#   (all 1 word = 4 bytes = 32 bits)
+# 
+# argc
+# argv[0]
+# ...
+# argv[argc-1]
+# 0
+# envp[0] (environment variables)
+# ...
+# envp[N]
+# 0
+# auxv[0].a_type (auxiliary vector)
+# auxv[0].a_value
+# ...
+# 0
+
+
+# syscall name                  %eax    arg0 (%ebx)                   arg1 (%ecx)                     arg2 (%edx)                              arg3 (%esi) 	arg4 (%edi) 	arg5 (%ebp)
+# 
+# restart_syscall               0x00    -                             -                               -                                        - 	- 	-
+# exit                          0x01    s32 error_code                -                               -                                        - 	- 	-
+# fork                          0x02    -                             -                               -                                        - 	- 	-
+# read                          0x03    u32 fd                        char *buf                       size_t count                             - 	- 	-
+# write                         0x04    u32 fd                        const char *buf                 size_t count                             - 	- 	-
+# open                          0x05    const char *filename          s32 flags                       umode_t mode                             - 	- 	-
+# close                         0x06    u32 fd                        -                               -                                        - 	- 	-
+# waitpid                       0x07    pid_t pid                     s32 *stat_addr                  s32 options                              - 	- 	-
+# creat                         0x08    const char *pathname          umode_t mode                    -                                        - 	- 	-
+# link                          0x09    const char *oldname           const char *newname             -                                        - 	- 	-
+# unlink                        0x0a    const char *pathname          -                               -                                        - 	- 	-
+# execve                        0x0b    const char *filename          const char *const *argv         const char *const *envp                  - 	- 	-
+# chdir                         0x0c    const char *filename          -                               -                                        - 	- 	-
+# time                          0x0d    __kernel_old_time_t *tloc     -                               -                                        - 	- 	-
+# mknod                         0x0e    const char *filename          umode_t mode                    unsigned dev                             - 	- 	-
+# chmod                         0x0f    const char *filename          umode_t mode                    -                                        - 	- 	-
+# lchown                        0x10    const char *filename          uid_t user                      gid_t group                              - 	- 	-
+# break                         0x11    ?                             ?                               ?                                        ? 	? 	?
+# oldstat                       0x12    ?                             ?                               ?                                        ? 	? 	?
+# lseek                         0x13    u32 fd                        off_t offset                    u32 whence                               - 	- 	-
+# getpid                        0x14    -                             -                               -                                        - 	- 	-
+# mount                         0x15    char *dev_name                char *dir_name                  char *type                               unsigned long flags 	void *data 	-
+# umount                        0x16    char *name                    s32 flags                       -                                        - 	- 	-
+# setuid                        0x17    uid_t uid                     -                               -                                        - 	- 	-
+# getuid                        0x18    -                             -                               -                                        - 	- 	-
+# stime                         0x19    __kernel_old_time_t *tptr     -                               -                                        - 	- 	-
+# ptrace                        0x1a    long request                  long pid                        unsigned long addr                       unsigned long data 	- 	-
+# alarm                         0x1b    u32 seconds                   -                               -                                        - 	- 	-
+# oldfstat                      0x1c    ?                             ?                               ?                                        ? 	? 	?
+# pause                         0x1d    -                             -                               -                                        - 	- 	-
+# utime                         0x1e    char *filename                utimbuf *times                  -                                        - 	- 	-
+# stty                          0x1f    ?                             ?                               ?                                        ? 	? 	?
+# gtty                          0x20    ?                             ?                               ?                                        ? 	? 	?
+# access                        0x21    const char *filename          s32 mode                        -                                        - 	- 	-
+# nice                          0x22    s32 increment                 -                               -                                        - 	- 	-
+# ftime                         0x23    ?                             ?                               ?                                        ? 	? 	?
+# sync                          0x24    -                             -                               -                                        - 	- 	-
+# kill                          0x25    pid_t pid                     s32 sig                         -                                        - 	- 	-
+# rename                        0x26    const char *oldname           const char *newname             -                                        - 	- 	-
+# mkdir                         0x27    const char *pathname          umode_t mode                    -                                        - 	- 	-
+# rmdir                         0x28    const char *pathname          -                               -                                        - 	- 	-
+# dup                           0x29    u32 fildes                    -                               -                                        - 	- 	-
+# pipe                          0x2a    s32 *fildes                   -                               -                                        - 	- 	-
+# times                         0x2b    tms *tbuf                     -                               -                                        - 	- 	-
+# prof                          0x2c    ?                             ?                               ?                                        ? 	? 	?
+# brk                           0x2d    unsigned long brk             -                               -                                        - 	- 	-
+# setgid                        0x2e    gid_t gid                     -                               -                                        - 	- 	-
+# getgid                        0x2f    -                             -                               -                                        - 	- 	-
+# signal                        0x30    s32 sig                       __sighandler_t handler          -                                        - 	- 	-
+# geteuid                       0x31    -                             -                               -                                        - 	- 	-
+# getegid                       0x32    -                             -                               -                                        - 	- 	-
+# acct                          0x33    const char *name              -                               -                                        - 	- 	-
+# umount2                       0x34    ?                             ?                               ?                                        ? 	? 	?
+# lock                          0x35    ?                             ?                               ?                                        ? 	? 	?
+# ioctl                         0x36    u32 fd                        u32 cmd                         unsigned long arg                        - 	- 	-
+# fcntl                         0x37    u32 fd                        u32 cmd                         unsigned long arg                        - 	- 	-
+# mpx                           0x38    ?                             ?                               ?                                        ? 	? 	?
+# setpgid                       0x39    pid_t pid                     pid_t pgid                      -                                        - 	- 	-
+# ulimit                        0x3a    ?                             ?                               ?                                        ? 	? 	?
+# oldolduname                   0x3b    ?                             ?                               ?                                        ? 	? 	?
+# umask                         0x3c    s32 mask                      -                               -                                        - 	- 	-
+# chroot                        0x3d    const char *filename          -                               -                                        - 	- 	-
+# ustat                         0x3e    unsigned dev                  ustat *ubuf                     -                                        - 	- 	-
+# dup2                          0x3f    u32 oldfd                     u32 newfd                       -                                        - 	- 	-
+# getppid                       0x40    -                             -                               -                                        - 	- 	-
+# getpgrp                       0x41    -                             -                               -                                        - 	- 	-
+# setsid                        0x42    -                             -                               -                                        - 	- 	-
+# sigaction                     0x43    s32                           const old_sigaction *           old_sigaction *                          - 	- 	-
+# sgetmask                      0x44    -                             -                               -                                        - 	- 	-
+# ssetmask                      0x45    s32 newmask                   -                               -                                        - 	- 	-
+# setreuid                      0x46    uid_t ruid                    uid_t euid                      -                                        - 	- 	-
+# setregid                      0x47    gid_t rgid                    gid_t egid                      -                                        - 	- 	-
+# sigsuspend                    0x48    s32 unused1                   s32 unused2                     old_sigset_t mask                        - 	- 	-
+# sigpending                    0x49    old_sigset_t *uset            -                               -                                        - 	- 	-
+# sethostname                   0x4a    char *name                    s32 len                         -                                        - 	- 	-
+# setrlimit                     0x4b    u32 resource                  rlimit *rlim                    -                                        - 	- 	-
+# getrlimit                     0x4c    u32 resource                  rlimit *rlim                    -                                        - 	- 	-
+# getrusage                     0x4d    s32 who                       rusage *ru                      -                                        - 	- 	-
+# gettimeofday                  0x4e    __kernel_old_timeval *tv      timezone *tz                    -                                        - 	- 	-
+# settimeofday                  0x4f    __kernel_old_timeval *tv      timezone *tz                    -                                        - 	- 	-
+# getgroups                     0x50    s32 gidsetsize                gid_t *grouplist                -                                        - 	- 	-
+# setgroups                     0x51    s32 gidsetsize                gid_t *grouplist                -                                        - 	- 	-
+# select                        0x52    s32 n                         fd_set *inp                     fd_set *outp                             fd_set *exp 	struct __kernel_old_timeval *tvp 	-
+# symlink                       0x53    const char *old               const char *new                 -                                        - 	- 	-
+# oldlstat                      0x54    ?                             ?                               ?                                        ? 	? 	?
+# readlink                      0x55    const char *path              char *buf                       s32 bufsiz                               - 	- 	-
+# uselib                        0x56    const char *library           -                               -                                        - 	- 	-
+# swapon                        0x57    const char *specialfile       s32 swap_flags                  -                                        - 	- 	-
+# reboot                        0x58    s32 magic1                    s32 magic2                      u32 cmd                                  void *arg 	- 	-
+# readdir                       0x59    ?                             ?                               ?                                        ? 	? 	?
+# mmap                          0x5a    ?                             ?                               ?                                        ? 	? 	?
+# munmap                        0x5b    unsigned long addr            size_t len                      -                                        - 	- 	-
+# truncate                      0x5c    const char *path              long length                     -                                        - 	- 	-
+# ftruncate                     0x5d    u32 fd                        off_t length                    -                                        - 	- 	-
+# fchmod                        0x5e    u32 fd                        umode_t mode                    -                                        - 	- 	-
+# fchown                        0x5f    u32 fd                        uid_t user                      gid_t group                              - 	- 	-
+# getpriority                   0x60    s32 which                     s32 who                         -                                        - 	- 	-
+# setpriority                   0x61    s32 which                     s32 who                         s32 niceval                              - 	- 	-
+# profil                        0x62    ?                             ?                               ?                                        ? 	? 	?
+# statfs                        0x63    const char * path             statfs *buf                     -                                        - 	- 	-
+# fstatfs                       0x64    u32 fd                        statfs *buf                     -                                        - 	- 	-
+# ioperm                        0x65    unsigned long from            unsigned long num               s32 on                                   - 	- 	-
+# socketcall                    0x66    s32 call                      unsigned long *args             -                                        - 	- 	-
+# syslog                        0x67    s32 type                      char *buf                       s32 len                                  - 	- 	-
+# setitimer                     0x68    s32 which                     __kernel_old_itimerval *value   __kernel_old_itimerval *ovalue           - 	- 	-
+# getitimer                     0x69    s32 which                     __kernel_old_itimerval *value   -                                        - 	- 	-
+# stat                          0x6a    const char *filename          __old_kernel_stat *statbuf      -                                        - 	- 	-
+# lstat                         0x6b    const char *filename          __old_kernel_stat *statbuf      -                                        - 	- 	-
+# fstat                         0x6c    u32 fd                        __old_kernel_stat *statbuf      -                                        - 	- 	-
+# olduname                      0x6d    oldold_utsname *              -                               -                                        - 	- 	-
+# iopl                          0x6e    ?                             ?                               ?                                        ? 	? 	?
+# vhangup                       0x6f    -                             -                               -                                        - 	- 	-
+# idle                          0x70    ?                             ?                               ?                                        ? 	? 	?
+# vm86old                       0x71    ?                             ?                               ?                                        ? 	? 	?
+# wait4                         0x72    pid_t pid                     s32 *stat_addr                  s32 options                              struct rusage *ru 	- 	-
+# swapoff                       0x73    const char *specialfile       -                               -                                        - 	- 	-
+# sysinfo                       0x74    sysinfo *info                 -                               -                                        - 	- 	-
+# ipc                           0x75    u32 call                      s32 first                       unsigned long second                     unsigned long third 	void *ptr 	long fifth
+# fsync                         0x76    u32 fd                        -                               -                                        - 	- 	-
+# sigreturn                     0x77    ?                             ?                               ?                                        ? 	? 	?
+# clone                         0x78    unsigned long                 unsigned long                   s32 *                                    s32 * 	unsigned long 	-
+# setdomainname                 0x79    char *name                    s32 len                         -                                        - 	- 	-
+# uname                         0x7a    old_utsname *                 -                               -                                        - 	- 	-
+# modify_ldt                    0x7b    ?                             ?                               ?                                        ? 	? 	?
+# adjtimex                      0x7c    __kernel_timex *txc_p         -                               -                                        - 	- 	-
+# mprotect                      0x7d    unsigned long start           size_t len                      unsigned long prot                       - 	- 	-
+# sigprocmask                   0x7e    s32 how                       old_sigset_t *set               old_sigset_t *oset                       - 	- 	-
+# create_module                 0x7f    ?                             ?                               ?                                        ? 	? 	?
+# init_module                   0x80    void *umod                    unsigned long len               const char *uargs                        - 	- 	-
+# delete_module                 0x81    const char *name_user         u32 flags                       -                                        - 	- 	-
+# get_kernel_syms               0x82    ?                             ?                               ?                                        ? 	? 	?
+# quotactl                      0x83    u32 cmd                       const char *special             qid_t id                                 void *addr 	- 	-
+# getpgid                       0x84    pid_t pid                     -                               -                                        - 	- 	-
+# fchdir                        0x85    u32 fd                        -                               -                                        - 	- 	-
+# bdflush                       0x86    ?                             ?                               ?                                        ? 	? 	?
+# sysfs                         0x87    s32 option                    unsigned long arg1              unsigned long arg2                       - 	- 	-
+# personality                   0x88    u32 personality               -                               -                                        - 	- 	-
+# afs_syscall                   0x89    ?                             ?                               ?                                        ? 	? 	?
+# setfsuid                      0x8a    uid_t uid                     -                               -                                        - 	- 	-
+# setfsgid                      0x8b    gid_t gid                     -                               -                                        - 	- 	-
+# _llseek                       0x8c    ?                             ?                               ?                                        ? 	? 	?
+# getdents                      0x8d    u32 fd                        linux_dirent *dirent            u32 count                                - 	- 	-
+# _newselect                    0x8e    ?                             ?                               ?                                        ? 	? 	?
+# flock                         0x8f    u32 fd                        u32 cmd                         -                                        - 	- 	-
+# msync                         0x90    unsigned long start           size_t len                      s32 flags                                - 	- 	-
+# readv                         0x91    unsigned long fd              const iovec *vec                unsigned long vlen                       - 	- 	-
+# writev                        0x92    unsigned long fd              const iovec *vec                unsigned long vlen                       - 	- 	-
+# getsid                        0x93    pid_t pid                     -                               -                                        - 	- 	-
+# fdatasync                     0x94    u32 fd                        -                               -                                        - 	- 	-
+# _sysctl                       0x95    ?                             ?                               ?                                        ? 	? 	?
+# mlock                         0x96    unsigned long start           size_t len                      -                                        - 	- 	-
+# munlock                       0x97    unsigned long start           size_t len                      -                                        - 	- 	-
+# mlockall                      0x98    s32 flags                     -                               -                                        - 	- 	-
+# munlockall                    0x99    -                             -                               -                                        - 	- 	-
+# sched_setparam                0x9a    pid_t pid                     sched_param *param              -                                        - 	- 	-
+# sched_getparam                0x9b    pid_t pid                     sched_param *param              -                                        - 	- 	-
+# sched_setscheduler            0x9c    pid_t pid                     s32 policy                      sched_param *param                       - 	- 	-
+# sched_getscheduler            0x9d    pid_t pid                     -                               -                                        - 	- 	-
+# sched_yield                   0x9e    -                             -                               -                                        - 	- 	-
+# sched_get_priority_max        0x9f    s32 policy                    -                               -                                        - 	- 	-
+# sched_get_priority_min        0xa0    s32 policy                    -                               -                                        - 	- 	-
+# sched_rr_get_interval         0xa1    pid_t pid                     __kernel_timespec *interval     -                                        - 	- 	-
+# nanosleep                     0xa2    __kernel_timespec *rqtp       __kernel_timespec *rmtp         -                                        - 	- 	-
+# mremap                        0xa3    unsigned long addr            unsigned long old_len           unsigned long new_len                    unsigned long flags 	unsigned long new_addr 	-
+# setresuid                     0xa4    uid_t ruid                    uid_t euid                      uid_t suid                               - 	- 	-
+# getresuid                     0xa5    uid_t *ruid                   uid_t *euid                     uid_t *suid                              - 	- 	-
+# vm86                          0xa6    ?                             ?                               ?                                        ? 	? 	?
+# query_module                  0xa7    ?                             ?                               ?                                        ? 	? 	?
+# poll                          0xa8    pollfd *ufds                  u32 nfds                        s32 timeout                              - 	- 	-
+# nfsservctl                    0xa9    ?                             ?                               ?                                        ? 	? 	?
+# setresgid                     0xaa    gid_t rgid                    gid_t egid                      gid_t sgid                               - 	- 	-
+# getresgid                     0xab    gid_t *rgid                   gid_t *egid                     gid_t *sgid                              - 	- 	-
+# prctl                         0xac    s32 option                    unsigned long arg2              unsigned long arg3                       unsigned long arg4 	unsigned long arg5 	-
+# rt_sigreturn                  0xad    ?                             ?                               ?                                        ? 	? 	?
+# rt_sigaction                  0xae    s32                           const sigaction *               sigaction *                              size_t 	- 	-
+# rt_sigprocmask                0xaf    s32 how                       sigset_t *set                   sigset_t *oset                           size_t sigsetsize 	- 	-
+# rt_sigpending                 0xb0    sigset_t *set                 size_t sigsetsize               -                                        - 	- 	-
+# rt_sigtimedwait               0xb1    const sigset_t *uthese        siginfo_t *uinfo                const __kernel_timespec *uts             size_t sigsetsize 	- 	-
+# rt_sigqueueinfo               0xb2    pid_t pid                     s32 sig                         siginfo_t *uinfo                         - 	- 	-
+# rt_sigsuspend                 0xb3    sigset_t *unewset             size_t sigsetsize               -                                        - 	- 	-
+# pread64                       0xb4    u32 fd                        char *buf                       size_t count                             loff_t pos 	- 	-
+# pwrite64                      0xb5    u32 fd                        const char *buf                 size_t count                             loff_t pos 	- 	-
+# chown                         0xb6    const char *filename          uid_t user                      gid_t group                              - 	- 	-
+# getcwd                        0xb7    char *buf                     unsigned long size              -                                        - 	- 	-
+# capget                        0xb8    cap_user_header_t header      cap_user_data_t dataptr         -                                        - 	- 	-
+# capset                        0xb9    cap_user_header_t header      const cap_user_data_t data      -                                        - 	- 	-
+# sigaltstack                   0xba    const sigaltstack *uss        sigaltstack *uoss               -                                        - 	- 	-
+# sendfile                      0xbb    s32 out_fd                    s32 in_fd                       off_t *offset                            size_t count 	- 	-
+# getpmsg                       0xbc    ?                             ?                               ?                                        ? 	? 	?
+# putpmsg                       0xbd    ?                             ?                               ?                                        ? 	? 	?
+# vfork                         0xbe    -                             -                               -                                        - 	- 	-
+# ugetrlimit                    0xbf    ?                             ?                               ?                                        ? 	? 	?
+# mmap2                         0xc0    ?                             ?                               ?                                        ? 	? 	?
+# truncate64                    0xc1    const char *path              loff_t length                   -                                        - 	- 	-
+# ftruncate64                   0xc2    u32 fd                        loff_t length                   -                                        - 	- 	-
+# stat64                        0xc3    const char *filename          stat64 *statbuf                 -                                        - 	- 	-
+# lstat64                       0xc4    const char *filename          stat64 *statbuf                 -                                        - 	- 	-
+# fstat64                       0xc5    unsigned long fd              stat64 *statbuf                 -                                        - 	- 	-
+# lchown32                      0xc6    ?                             ?                               ?                                        ? 	? 	?
+# getuid32                      0xc7    ?                             ?                               ?                                        ? 	? 	?
+# getgid32                      0xc8    ?                             ?                               ?                                        ? 	? 	?
+# geteuid32                     0xc9    ?                             ?                               ?                                        ? 	? 	?
+# getegid32                     0xca    ?                             ?                               ?                                        ? 	? 	?
+# setreuid32                    0xcb    ?                             ?                               ?                                        ? 	? 	?
+# setregid32                    0xcc    ?                             ?                               ?                                        ? 	? 	?
+# getgroups32                   0xcd    ?                             ?                               ?                                        ? 	? 	?
+# setgroups32                   0xce    ?                             ?                               ?                                        ? 	? 	?
+# fchown32                      0xcf    ?                             ?                               ?                                        ? 	? 	?
+# setresuid32                   0xd0    ?                             ?                               ?                                        ? 	? 	?
+# getresuid32                   0xd1    ?                             ?                               ?                                        ? 	? 	?
+# setresgid32                   0xd2    ?                             ?                               ?                                        ? 	? 	?
+# getresgid32                   0xd3    ?                             ?                               ?                                        ? 	? 	?
+# chown32                       0xd4    ?                             ?                               ?                                        ? 	? 	?
+# setuid32                      0xd5    ?                             ?                               ?                                        ? 	? 	?
+# setgid32                      0xd6    ?                             ?                               ?                                        ? 	? 	?
+# setfsuid32                    0xd7    ?                             ?                               ?                                        ? 	? 	?
+# setfsgid32                    0xd8    ?                             ?                               ?                                        ? 	? 	?
+# pivot_root                    0xd9    const char *new_root          const char *put_old             -                                        - 	- 	-
+# mincore                       0xda    unsigned long start           size_t len                      unsigned char * vec                      - 	- 	-
+# madvise                       0xdb    unsigned long start           size_t len                      s32 behavior                             - 	- 	-
+# getdents64                    0xdc    u32 fd                        linux_dirent64 *dirent          u32 count                                - 	- 	-
+# fcntl64                       0xdd    u32 fd                        u32 cmd                         unsigned long arg                        - 	- 	-
+# gettid                        0xe0    -                             -                               -                                        - 	- 	-
+# readahead                     0xe1    s32 fd                        loff_t offset                   size_t count                             - 	- 	-
+# setxattr                      0xe2    const char *path              const char *name                const void *value                        size_t size 	s32 flags 	-
+# lsetxattr                     0xe3    const char *path              const char *name                const void *value                        size_t size 	s32 flags 	-
+# fsetxattr                     0xe4    s32 fd                        const char *name                const void *value                        size_t size 	s32 flags 	-
+# getxattr                      0xe5    const char *path              const char *name                void *value                              size_t size 	- 	-
+# lgetxattr                     0xe6    const char *path              const char *name                void *value                              size_t size 	- 	-
+# fgetxattr                     0xe7    s32 fd                        const char *name                void *value                              size_t size 	- 	-
+# listxattr                     0xe8    const char *path              char *list                      size_t size                              - 	- 	-
+# llistxattr                    0xe9    const char *path              char *list                      size_t size                              - 	- 	-
+# flistxattr                    0xea    s32 fd                        char *list                      size_t size                              - 	- 	-
+# removexattr                   0xeb    const char *path              const char *name                -                                        - 	- 	-
+# lremovexattr                  0xec    const char *path              const char *name                -                                        - 	- 	-
+# fremovexattr                  0xed    s32 fd                        const char *name                -                                        - 	- 	-
+# tkill                         0xee    pid_t pid                     s32 sig                         -                                        - 	- 	-
+# sendfile64                    0xef    s32 out_fd                    s32 in_fd                       loff_t *offset                           size_t count 	- 	-
+# futex                         0xf0    u32 *uaddr                    s32 op                          u32 val                                  const struct __kernel_timespec *utime 	u32 *uaddr2 	u32 val3
+# sched_setaffinity             0xf1    pid_t pid                     u32 len                         unsigned long *user_mask_ptr             - 	- 	-
+# sched_getaffinity             0xf2    pid_t pid                     u32 len                         unsigned long *user_mask_ptr             - 	- 	-
+# set_thread_area               0xf3    ?                             ?                               ?                                        ? 	? 	?
+# get_thread_area               0xf4    ?                             ?                               ?                                        ? 	? 	?
+# io_setup                      0xf5    unsigned nr_reqs              aio_context_t *ctx              -                                        - 	- 	-
+# io_destroy                    0xf6    aio_context_t ctx             -                               -                                        - 	- 	-
+# io_getevents                  0xf7    aio_context_t ctx_id          long min_nr                     long nr                                  struct io_event *events 	struct __kernel_timespec *timeout 	-
+# io_submit                     0xf8    aio_context_t                 long                            iocb * *                                 - 	- 	-
+# io_cancel                     0xf9    aio_context_t ctx_id          iocb *iocb                      io_event *result                         - 	- 	-
+# fadvise64                     0xfa    s32 fd                        loff_t offset                   size_t len                               s32 advice 	- 	-
+# exit_group                    0xfc    s32 error_code                -                               -                                        - 	- 	-
+# lookup_dcookie                0xfd    ?                             ?                               ?                                        ? 	? 	?
+# epoll_create                  0xfe    s32 size                      -                               -                                        - 	- 	-
+# epoll_ctl                     0xff    s32 epfd                      s32 op                          s32 fd                                   struct epoll_event *event 	- 	-
+# epoll_wait                    0x100   s32 epfd                      epoll_event *events             s32 maxevents                            s32 timeout 	- 	-
+# remap_file_pages              0x101   unsigned long start           unsigned long size              unsigned long prot                       unsigned long pgoff 	unsigned long flags 	-
+# set_tid_address               0x102   s32 *tidptr                   -                               -                                        - 	- 	-
+# timer_create                  0x103   clockid_t which_clock         sigevent *timer_event_spec      timer_t * created_timer_id               - 	- 	-
+# timer_settime                 0x104   timer_t timer_id              s32 flags                       const __kernel_itimerspec *new_setting   struct __kernel_itimerspec *old_setting 	- 	-
+# timer_gettime                 0x105   timer_t timer_id              __kernel_itimerspec *setting    -                                        - 	- 	-
+# timer_getoverrun              0x106   timer_t timer_id              -                               -                                        - 	- 	-
+# timer_delete                  0x107   timer_t timer_id              -                               -                                        - 	- 	-
+# clock_settime                 0x108   clockid_t which_clock         const __kernel_timespec *tp     -                                        - 	- 	-
+# clock_gettime                 0x109   clockid_t which_clock         __kernel_timespec *tp           -                                        - 	- 	-
+# clock_getres                  0x10a   clockid_t which_clock         __kernel_timespec *tp           -                                        - 	- 	-
+# clock_nanosleep               0x10b   clockid_t which_clock         s32 flags                       const __kernel_timespec *rqtp            struct __kernel_timespec *rmtp 	- 	-
+# statfs64                      0x10c   const char *path              size_t sz                       statfs64 *buf                            - 	- 	-
+# fstatfs64                     0x10d   u32 fd                        size_t sz                       statfs64 *buf                            - 	- 	-
+# tgkill                        0x10e   pid_t tgid                    pid_t pid                       s32 sig                                  - 	- 	-
+# utimes                        0x10f   char *filename                __kernel_old_timeval *utimes    -                                        - 	- 	-
+# fadvise64_64                  0x110   s32 fd                        loff_t offset                   loff_t len                               s32 advice 	- 	-
+# vserver                       0x111   ?                             ?                               ?                                        ? 	? 	?
+# mbind                         0x112   unsigned long start           unsigned long len               unsigned long mode                       const unsigned long *nmask 	unsigned long maxnode 	unsigned flags
+# get_mempolicy                 0x113   s32 *policy                   unsigned long *nmask            unsigned long maxnode                    unsigned long addr 	unsigned long flags 	-
+# set_mempolicy                 0x114   s32 mode                      const unsigned long *nmask      unsigned long maxnode                    - 	- 	-
+# mq_open                       0x115   const char *name              s32 oflag                       umode_t mode                             struct mq_attr *attr 	- 	-
+# mq_unlink                     0x116   const char *name              -                               -                                        - 	- 	-
+# mq_timedsend                  0x117   mqd_t mqdes                   const char *msg_ptr             size_t msg_len                           u32 msg_prio 	const struct __kernel_timespec *abs_timeout 	-
+# mq_timedreceive               0x118   mqd_t mqdes                   char *msg_ptr                   size_t msg_len                           u32 *msg_prio 	const struct __kernel_timespec *abs_timeout 	-
+# mq_notify                     0x119   mqd_t mqdes                   const sigevent *notification    -                                        - 	- 	-
+# mq_getsetattr                 0x11a   mqd_t mqdes                   const mq_attr *mqstat           mq_attr *omqstat                         - 	- 	-
+# kexec_load                    0x11b   unsigned long entry           unsigned long nr_segments       kexec_segment *segments                  unsigned long flags 	- 	-
+# waitid                        0x11c   s32 which                     pid_t pid                       siginfo *infop                           s32 options 	struct rusage *ru 	-
+# add_key                       0x11e   const char *_type             const char *_description        const void *_payload                     size_t plen 	key_serial_t destringid 	-
+# request_key                   0x11f   const char *_type             const char *_description        const char *_callout_info                key_serial_t destringid 	- 	-
+# keyctl                        0x120   s32 cmd                       unsigned long arg2              unsigned long arg3                       unsigned long arg4 	unsigned long arg5 	-
+# ioprio_set                    0x121   s32 which                     s32 who                         s32 ioprio                               - 	- 	-
+# ioprio_get                    0x122   s32 which                     s32 who                         -                                        - 	- 	-
+# inotify_init                  0x123   -                             -                               -                                        - 	- 	-
+# inotify_add_watch             0x124   s32 fd                        const char *path                u32 mask                                 - 	- 	-
+# inotify_rm_watch              0x125   s32 fd                        __s32 wd                        -                                        - 	- 	-
+# migrate_pages                 0x126   pid_t pid                     unsigned long maxnode           const unsigned long *from                const unsigned long *to 	- 	-
+# openat                        0x127   s32 dfd                       const char *filename            s32 flags                                umode_t mode 	- 	-
+# mkdirat                       0x128   s32 dfd                       const char * pathname           umode_t mode                             - 	- 	-
+# mknodat                       0x129   s32 dfd                       const char * filename           umode_t mode                             unsigned dev 	- 	-
+# fchownat                      0x12a   s32 dfd                       const char *filename            uid_t user                               gid_t group 	s32 flag 	-
+# futimesat                     0x12b   s32 dfd                       const char *filename            __kernel_old_timeval *utimes             - 	- 	-
+# fstatat64                     0x12c   s32 dfd                       const char *filename            stat64 *statbuf                          s32 flag 	- 	-
+# unlinkat                      0x12d   s32 dfd                       const char * pathname           s32 flag                                 - 	- 	-
+# renameat                      0x12e   s32 olddfd                    const char * oldname            s32 newdfd                               const char * newname 	- 	-
+# linkat                        0x12f   s32 olddfd                    const char *oldname             s32 newdfd                               const char *newname 	s32 flags 	-
+# symlinkat                     0x130   const char * oldname          s32 newdfd                      const char * newname                     - 	- 	-
+# readlinkat                    0x131   s32 dfd                       const char *path                char *buf                                s32 bufsiz 	- 	-
+# fchmodat                      0x132   s32 dfd                       const char *filename            umode_t mode                             - 	- 	-
+# faccessat                     0x133   s32 dfd                       const char *filename            s32 mode                                 - 	- 	-
+# pselect6                      0x134   s32                           fd_set *                        fd_set *                                 fd_set * 	struct __kernel_timespec * 	void *
+# ppoll                         0x135   pollfd *                      u32                             __kernel_timespec *                      const sigset_t * 	size_t 	-
+# unshare                       0x136   unsigned long unshare_flags   -                               -                                        - 	- 	-
+# set_robust_list               0x137   robust_list_head *head        size_t len                      -                                        - 	- 	-
+# get_robust_list               0x138   s32 pid                       robust_list_head * *head_ptr    size_t *len_ptr                          - 	- 	-
+# splice                        0x139   s32 fd_in                     loff_t *off_in                  s32 fd_out                               loff_t *off_out 	size_t len 	u32 flags
+# sync_file_range               0x13a   s32 fd                        loff_t offset                   loff_t nbytes                            u32 flags 	- 	-
+# tee                           0x13b   s32 fdin                      s32 fdout                       size_t len                               u32 flags 	- 	-
+# vmsplice                      0x13c   s32 fd                        const iovec *iov                unsigned long nr_segs                    u32 flags 	- 	-
+# move_pages                    0x13d   pid_t pid                     unsigned long nr_pages          const void * *pages                      const s32 *nodes 	s32 *status 	s32 flags
+# getcpu                        0x13e   unsigned *cpu                 unsigned *node                  getcpu_cache *cache                      - 	- 	-
+# epoll_pwait                   0x13f   s32 epfd                      epoll_event *events             s32 maxevents                            s32 timeout 	const sigset_t *sigmask 	size_t sigsetsize
+# utimensat                     0x140   s32 dfd                       const char *filename            __kernel_timespec *utimes                s32 flags 	- 	-
+# signalfd                      0x141   s32 ufd                       sigset_t *user_mask             size_t sizemask                          - 	- 	-
+# timerfd_create                0x142   s32 clockid                   s32 flags                       -                                        - 	- 	-
+# eventfd                       0x143   u32 count                     -                               -                                        - 	- 	-
+# fallocate                     0x144   s32 fd                        s32 mode                        loff_t offset                            loff_t len 	- 	-
+# timerfd_settime               0x145   s32 ufd                       s32 flags                       const __kernel_itimerspec *utmr          struct __kernel_itimerspec *otmr 	- 	-
+# timerfd_gettime               0x146   s32 ufd                       __kernel_itimerspec *otmr       -                                        - 	- 	-
+# signalfd4                     0x147   s32 ufd                       sigset_t *user_mask             size_t sizemask                          s32 flags 	- 	-
+# eventfd2                      0x148   u32 count                     s32 flags                       -                                        - 	- 	-
+# epoll_create1                 0x149   s32 flags                     -                               -                                        - 	- 	-
+# dup3                          0x14a   u32 oldfd                     u32 newfd                       s32 flags                                - 	- 	-
+# pipe2                         0x14b   s32 *fildes                   s32 flags                       -                                        - 	- 	-
+# inotify_init1                 0x14c   s32 flags                     -                               -                                        - 	- 	-
+# preadv                        0x14d   unsigned long fd              const iovec *vec                unsigned long vlen                       unsigned long pos_l 	unsigned long pos_h 	-
+# pwritev                       0x14e   unsigned long fd              const iovec *vec                unsigned long vlen                       unsigned long pos_l 	unsigned long pos_h 	-
+# rt_tgsigqueueinfo             0x14f   pid_t tgid                    pid_t pid                       s32 sig                                  siginfo_t *uinfo 	- 	-
+# perf_event_open               0x150   perf_event_attr *attr_uptr    pid_t pid                       s32 cpu                                  s32 group_fd 	unsigned long flags 	-
+# recvmmsg                      0x151   s32 fd                        mmsghdr *msg                    u32 vlen                                 unsigned flags 	struct __kernel_timespec *timeout 	-
+# fanotify_init                 0x152   u32 flags                     u32 event_f_flags               -                                        - 	- 	-
+# fanotify_mark                 0x153   s32 fanotify_fd               u32 flags                       u64 mask                                 s32 fd 	const char *pathname 	-
+# prlimit64                     0x154   pid_t pid                     u32 resource                    const rlimit64 *new_rlim                 struct rlimit64 *old_rlim 	- 	-
+# name_to_handle_at             0x155   s32 dfd                       const char *name                file_handle *handle                      void *mnt_id 	s32 flag 	-
+# open_by_handle_at             0x156   s32 mountdirfd                file_handle *handle             s32 flags                                - 	- 	-
+# clock_adjtime                 0x157   clockid_t which_clock         __kernel_timex *tx              -                                        - 	- 	-
+# syncfs                        0x158   s32 fd                        -                               -                                        - 	- 	-
+# sendmmsg                      0x159   s32 fd                        mmsghdr *msg                    u32 vlen                                 unsigned flags 	- 	-
+# setns                         0x15a   s32 fd                        s32 nstype                      -                                        - 	- 	-
+# process_vm_readv              0x15b   pid_t pid                     const iovec *lvec               unsigned long liovcnt                    const struct iovec *rvec 	unsigned long riovcnt 	unsigned long flags
+# process_vm_writev             0x15c   pid_t pid                     const iovec *lvec               unsigned long liovcnt                    const struct iovec *rvec 	unsigned long riovcnt 	unsigned long flags
+# kcmp                          0x15d   pid_t pid1                    pid_t pid2                      s32 type                                 unsigned long idx1 	unsigned long idx2 	-
+# finit_module                  0x15e   s32 fd                        const char *uargs               s32 flags                                - 	- 	-
+# sched_setattr                 0x15f   pid_t pid                     sched_attr *attr                u32 flags                                - 	- 	-
+# sched_getattr                 0x160   pid_t pid                     sched_attr *attr                u32 size                                 u32 flags 	- 	-
+# renameat2                     0x161   s32 olddfd                    const char *oldname             s32 newdfd                               const char *newname 	u32 flags 	-
+# seccomp                       0x162   u32 op                        u32 flags                       void *uargs                              - 	- 	-
+# getrandom                     0x163   char *buf                     size_t count                    u32 flags                                - 	- 	-
+# memfd_create                  0x164   const char *uname_ptr         u32 flags                       -                                        - 	- 	-
+# bpf                           0x165   s32 cmd                       union bpf_attr *attr            u32 size                                 - 	- 	-
+# execveat                      0x166   s32 dfd                       const char *filename            const char *const *argv                  const char *const *envp 	s32 flags 	-
+# socket                        0x167   s32                           s32                             s32                                      - 	- 	-
+# socketpair                    0x168   s32                           s32                             s32                                      s32 * 	- 	-
+# bind                          0x169   s32                           sockaddr *                      s32                                      - 	- 	-
+# connect                       0x16a   s32                           sockaddr *                      s32                                      - 	- 	-
+# listen                        0x16b   s32                           s32                             -                                        - 	- 	-
+# accept4                       0x16c   s32                           sockaddr *                      s32 *                                    s32 	- 	-
+# getsockopt                    0x16d   s32 fd                        s32 level                       s32 optname                              char *optval 	s32 *optlen 	-
+# setsockopt                    0x16e   s32 fd                        s32 level                       s32 optname                              char *optval 	s32 optlen 	-
+# getsockname                   0x16f   s32                           sockaddr *                      s32 *                                    - 	- 	-
+# getpeername                   0x170   s32                           sockaddr *                      s32 *                                    - 	- 	-
+# sendto                        0x171   s32                           void *                          size_t                                   unsigned 	struct sockaddr * 	s32
+# sendmsg                       0x172   s32 fd                        user_msghdr *msg                unsigned flags                           - 	- 	-
+# recvfrom                      0x173   s32                           void *                          size_t                                   unsigned 	struct sockaddr * 	s32 *
+# recvmsg                       0x174   s32 fd                        user_msghdr *msg                unsigned flags                           - 	- 	-
+# shutdown                      0x175   s32                           s32                             -                                        - 	- 	-
+# userfaultfd                   0x176   s32 flags                     -                               -                                        - 	- 	-
+# membarrier                    0x177   s32 cmd                       u32 flags                       s32 cpu_id                               - 	- 	-
+# mlock2                        0x178   unsigned long start           size_t len                      s32 flags                                - 	- 	-
+# copy_file_range               0x179   s32 fd_in                     loff_t *off_in                  s32 fd_out                               loff_t *off_out 	size_t len 	u32 flags
+# preadv2                       0x17a   unsigned long fd              const iovec *vec                unsigned long vlen                       unsigned long pos_l 	unsigned long pos_h 	rwf_t flags
+# pwritev2                      0x17b   unsigned long fd              const iovec *vec                unsigned long vlen                       unsigned long pos_l 	unsigned long pos_h 	rwf_t flags
+# pkey_mprotect                 0x17c   unsigned long start           size_t len                      unsigned long prot                       s32 pkey 	- 	-
+# pkey_alloc                    0x17d   unsigned long flags           unsigned long init_val          -                                        - 	- 	-
+# pkey_free                     0x17e   s32 pkey                      -                               -                                        - 	- 	-
+# statx                         0x17f   s32 dfd                       const char *path                unsigned flags                           unsigned mask 	struct statx *buffer 	-
+# arch_prctl                    0x180   ?                             ?                               ?                                        ? 	? 	?
+# io_pgetevents                 0x181   aio_context_t ctx_id          long min_nr                     long nr                                  struct io_event *events 	struct __kernel_timespec *timeout 	const struct __aio_sigset *sig
+# rseq                          0x182   rseq *rseq                    uint32_t rseq_len               s32 flags                                uint32_t sig 	- 	-
+# semget                        0x189   key_t key                     s32 nsems                       s32 semflg                               - 	- 	-
+# semctl                        0x18a   s32 semid                     s32 semnum                      s32 cmd                                  unsigned long arg 	- 	-
+# shmget                        0x18b   key_t key                     size_t size                     s32 flag                                 - 	- 	-
+# shmctl                        0x18c   s32 shmid                     s32 cmd                         shmid_ds *buf                            - 	- 	-
+# shmat                         0x18d   s32 shmid                     char *shmaddr                   s32 shmflg                               - 	- 	-
+# shmdt                         0x18e   char *shmaddr                 -                               -                                        - 	- 	-
+# msgget                        0x18f   key_t key                     s32 msgflg                      -                                        - 	- 	-
+# msgsnd                        0x190   s32 msqid                     msgbuf *msgp                    size_t msgsz                             s32 msgflg 	- 	-
+# msgrcv                        0x191   s32 msqid                     msgbuf *msgp                    size_t msgsz                             long msgtyp 	s32 msgflg 	-
+# msgctl                        0x192   s32 msqid                     s32 cmd                         msqid_ds *buf                            - 	- 	-
+# clock_gettime64               0x193   ?                             ?                               ?                                        ? 	? 	?
+# clock_settime64               0x194   ?                             ?                               ?                                        ? 	? 	?
+# clock_adjtime64               0x195   ?                             ?                               ?                                        ? 	? 	?
+# clock_getres_time64           0x196   ?                             ?                               ?                                        ? 	? 	?
+# clock_nanosleep_time64        0x197   ?                             ?                               ?                                        ? 	? 	?
+# timer_gettime64               0x198   ?                             ?                               ?                                        ? 	? 	?
+# timer_settime64               0x199   ?                             ?                               ?                                        ? 	? 	?
+# timerfd_gettime64             0x19a   ?                             ?                               ?                                        ? 	? 	?
+# timerfd_settime64             0x19b   ?                             ?                               ?                                        ? 	? 	?
+# utimensat_time64              0x19c   ?                             ?                               ?                                        ? 	? 	?
+# pselect6_time64               0x19d   ?                             ?                               ?                                        ? 	? 	?
+# ppoll_time64                  0x19e   ?                             ?                               ?                                        ? 	? 	?
+# io_pgetevents_time64          0x1a0   ?                             ?                               ?                                        ? 	? 	?
+# recvmmsg_time64               0x1a1   ?                             ?                               ?                                        ? 	? 	?
+# mq_timedsend_time64           0x1a2   ?                             ?                               ?                                        ? 	? 	?
+# mq_timedreceive_time64        0x1a3   ?                             ?                               ?                                        ? 	? 	?
+# semtimedop_time64             0x1a4   ?                             ?                               ?                                        ? 	? 	?
+# rt_sigtimedwait_time64        0x1a5   ?                             ?                               ?                                        ? 	? 	?
+# futex_time64                  0x1a6   ?                             ?                               ?                                        ? 	? 	?
+# sched_rr_get_interval_time64  0x1a7   ?                             ?                               ?                                        ? 	? 	?
+# pidfd_send_signal             0x1a8   s32 pidfd                     s32 sig                         siginfo_t *info                          u32 flags 	- 	-
+# io_uring_setup                0x1a9   u32 entries                   io_uring_params *p              -                                        - 	- 	-
+# io_uring_enter                0x1aa   u32 fd                        u32 to_submit                   u32 min_complete                         u32 flags 	const void *argp 	size_t argsz
+# io_uring_register             0x1ab   u32 fd                        u32 op                          void *arg                                u32 nr_args 	- 	-
+# open_tree                     0x1ac   s32 dfd                       const char *path                unsigned flags                           - 	- 	-
+# move_mount                    0x1ad   s32 from_dfd                  const char *from_path           s32 to_dfd                               const char *to_path 	u32 ms_flags 	-
+# fsopen                        0x1ae   const char *fs_name           u32 flags                       -                                        - 	- 	-
+# fsconfig                      0x1af   s32 fs_fd                     u32 cmd                         const char *key                          const void *value 	s32 aux 	-
+# fsmount                       0x1b0   s32 fs_fd                     u32 flags                       u32 ms_flags                             - 	- 	-
+# fspick                        0x1b1   s32 dfd                       const char *path                u32 flags                                - 	- 	-
+# pidfd_open                    0x1b2   pid_t pid                     u32 flags                       -                                        - 	- 	-
+# clone3                        0x1b3   clone_args *uargs             size_t size                     -                                        - 	- 	-
+# close_range                   0x1b4   u32 fd                        u32 max_fd                      u32 flags                                - 	- 	-
+# faccessat2                    0x1b7   s32 dfd                       const char *filename            s32 mode                                 s32 flags 	- 	-
+# not implemented               0xde
+# not implemented               0xdf
+# not implemented               0xfb
+# not implemented               0x11d
+# not implemented               0x183
+# not implemented               0x184
+# not implemented               0x185
+# not implemented               0x186
+# not implemented               0x187
+# not implemented               0x188
+# not implemented               0x19f
+# not implemented               0x1b5
+# not implemented               0x1b6
+
+
+
+# =================== ELF HEADER ===================
+
+7f 45 4c 46  # 0000 | signature: \x7fELF
+01           # 0004 | file class: 32-bit = 1
+   01        # 0005 | data encoding: little-endian = 1
+      01     # 0006 | file version: current = 1
+         00  # 0007 | os/abi identification: System-V = 0
+00           # 0008 | abi version = 0 on linux
+   00 00 00  # 0009 | 
+00 00 00 00  # 000c | 
+02 00        # 0010 | object file type: executable = 2
+      03 00  # 0012 | machine type: 386 = 3
+01 00 00 00  # 0014 | object file version: current = 1
+54 80 04 08  # 0018 | entry point address: base address (x86) = 0x8048000
+34 00 00 00  # 001c | program header offset: directly after ELF header = 0x34
+00 00 00 00  # 0020 | section header offset: no section headers = 0
+00 00 00 00  # 0024 | processor specific flags
+34 00        # 0028 | ELF header size = 0x34
+      20 00  # 002a | program header entry size = 0x20
+01 00        # 002c | number of program headers = 1
+      28 00  # 002e | section header entry size = 0x28
+00 00        # 0030 | number of section headers = 0
+      00 00  # 0032 | section name string table index = 0
+
+
+# =================== PROGRAM HEADER ===================
+
+01 00 00 00  # 0034 | segment type: PT_LOAD = 1
+00 00 00 00  # 0038 | segment offset = 0
+00 80 04 08  # 003c | segment virtual address = base address
+00 00 00 00  # 0040 | segment physical address: unused on linux = 0
+?? ?? ?? ??  # 0044 | file size on disk
+?? ?? ?? ??  # 0048 | segment size on memory
+07 00 00 00  # 004c | flags: 1=X, 2=W, 4=R
+00 10 00 00  # 0050 | alignment: 0x1000
